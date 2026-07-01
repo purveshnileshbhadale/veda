@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     
     # Free AI Providers - configure which ones you want to use
     GEMINI_API_KEY: Optional[str] = None
-    GROQ_API_KEY: Optional[str] = None
+    GROQ_API_KEY: Optional[str] = "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"
     OPENROUTER_API_KEY: Optional[str] = None
     DEEPSEEK_API_KEY: Optional[str] = None
     
