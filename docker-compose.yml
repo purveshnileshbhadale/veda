@@ -1,0 +1,105 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: veda-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://veda:veda@postgres:5432/veda
+      - DATABASE_SYNC_URL=postgresql://veda:veda@postgres:5432/veda
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-veda-super-secret-key-change-in-production}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - DEBUG=false
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - ./backend:/app
+      - veda_data:/app/data
+    networks:
+      - veda-network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: veda-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - veda-network
+    command: npm run dev
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: veda-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: veda
+      POSTGRES_PASSWORD: veda
+      POSTGRES_DB: veda
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U veda -d veda"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - veda-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: veda-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - veda-network
+
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: veda-chromadb
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    environment:
+      - IS_PERSISTENT=TRUE
+      - PERSIST_DIRECTORY=/chroma/data
+    volumes:
+      - chroma_data:/chroma/data
+    networks:
+      - veda-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  chroma_data:
+  veda_data:
+
+networks:
+  veda-network:
+    driver: bridge

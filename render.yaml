@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: veda-backend
+    runtime: python
+    repo: https://github.com/purveshnileshbhadale/veda
+    plan: free
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: AI_PROVIDER
+        value: groq
+      - key: GROQ_API_KEY
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: '["https://frontend-delta-weld-86.vercel.app","https://frontend-p7p1q3uwp-purveshnileshbhadales-projects.vercel.app"]'
