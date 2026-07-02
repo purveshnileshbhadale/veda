@@ -1,11 +1,10 @@
 services:
   - type: web
     name: veda-backend
-    runtime: python
+    env: docker
     repo: https://github.com/purveshnileshbhadale/veda
     plan: free
-    buildCommand: pip install -r backend/requirements.txt
-    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    dockerfilePath: ./Dockerfile
     envVars:
       - key: AI_PROVIDER
         value: groq
@@ -14,4 +13,4 @@ services:
       - key: SECRET_KEY
         value: veda-render-secret-2026
       - key: CORS_ORIGINS
-        value: '["https://frontend-delta-weld-86.vercel.app","https://4ebfe6bede66af51-103-183-84-23.serveousercontent.com"]'
+        value: '["https://frontend-delta-weld-86.vercel.app"]'
