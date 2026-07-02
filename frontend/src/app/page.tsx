@@ -418,8 +418,8 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-screen bg-[#0d0d1a]">
-      {/* Sidebar */}
-      <aside className={`${showSidebar ? 'w-64' : 'w-0'} transition-all duration-200 overflow-hidden border-r border-white/[0.03] flex flex-col bg-[#090912] shrink-0`}>
+      {/* Sidebar - Desktop */}
+      <aside className="hidden md:flex flex-col w-64 border-r border-white/[0.03] bg-[#090912] shrink-0">
         <div className="p-3">
           <button onClick={newChat}
             className="flex w-full items-center gap-2 rounded-xl border border-white/[0.06] px-3 py-2.5 text-sm text-white/60 hover:text-white hover:border-white/[0.12] hover:bg-white/[0.03] transition-all">
@@ -451,6 +451,45 @@ export default function ChatPage() {
           </button>
         </div>
       </aside>
+
+      {/* Sidebar - Mobile Overlay */}
+      {showSidebar && (
+        <div className="md:hidden fixed inset-0 z-40 flex">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowSidebar(false)} />
+          <aside className="relative w-64 border-r border-white/[0.03] bg-[#090912] flex flex-col h-full">
+            <div className="p-3">
+              <button onClick={() => { newChat(); setShowSidebar(false); }}
+                className="flex w-full items-center gap-2 rounded-xl border border-white/[0.06] px-3 py-2.5 text-sm text-white/60 hover:text-white hover:border-white/[0.12] hover:bg-white/[0.03] transition-all">
+                <Plus className="h-4 w-4" />
+                New chat
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-2 space-y-0.5">
+              {conversations.map(c => (
+                <div key={c.id}
+                  className={`group flex items-center gap-2 rounded-xl px-3 py-2 text-sm cursor-pointer transition-colors ${
+                    c.id === activeId ? 'bg-white/[0.07] text-white' : 'text-white/40 hover:bg-white/[0.03] hover:text-white/70'
+                  }`}
+                  onClick={() => { setActiveId(c.id); setShowSidebar(false); }}>
+                  <MessageSquare className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate flex-1">{c.title}</span>
+                  <button onClick={(e) => { e.stopPropagation(); deleteChat(c.id); }}
+                    className="opacity-0 group-hover:opacity-100 text-white/20 hover:text-red-400 transition-all">
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="p-3 border-t border-white/[0.03]">
+              <button onClick={() => { setShowSettings(true); setShowSidebar(false); }}
+                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.03] transition-colors">
+                <Settings className="h-3.5 w-3.5" />
+                Settings
+              </button>
+            </div>
+          </aside>
+        </div>
+      )}
 
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
@@ -502,19 +541,19 @@ export default function ChatPage() {
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto scrollbar-thin">
-          <div className="mx-auto max-w-3xl px-4">
+          <div className="mx-auto w-full md:max-w-3xl px-3 md:px-4">
             {messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center min-h-[75vh] text-center">
-                <div className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br shadow-lg mb-5 ${
+              <div className="flex flex-col items-center justify-center min-h-[60vh] md:min-h-[75vh] text-center px-2">
+                <div className={`flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-2xl bg-gradient-to-br shadow-lg mb-4 md:mb-5 ${
                   modes.find(m => m.id === mode)?.color || 'from-indigo-500 to-cyan-400'
                 } ${mode === 'research' ? 'shadow-indigo-500/15' : mode === 'mun' ? 'shadow-emerald-500/15' : mode === 'literature' ? 'shadow-violet-500/15' : mode === 'brainstorm' ? 'shadow-amber-500/15' : mode === 'editor' ? 'shadow-rose-500/15' : 'shadow-cyan-500/15'}`}>
-                  {modes.find(m => m.id === mode)?.icon || <Sparkles className="h-7 w-7 text-white" />}
+                  {modes.find(m => m.id === mode)?.icon || <Sparkles className="h-6 w-6 md:h-7 md:w-7 text-white" />}
                 </div>
-                <h1 className="text-xl font-semibold text-white/85 mb-1.5">{modes.find(m => m.id === mode)?.label || 'How can I help?'}</h1>
-                <p className="text-sm text-white/35 mb-7 max-w-md leading-relaxed">
+                <h1 className="text-lg md:text-xl font-semibold text-white/85 mb-1">{modes.find(m => m.id === mode)?.label || 'How can I help?'}</h1>
+                <p className="text-xs md:text-sm text-white/35 mb-5 md:mb-7 max-w-md leading-relaxed">
                   {modes.find(m => m.id === mode)?.desc || 'Research paper writing assistant'}
                 </p>
-                <div className="grid gap-2 w-full max-w-lg">
+                <div className="grid gap-1.5 md:gap-2 w-full max-w-lg">
                   {(modes.find(m => m.id === mode)?.suggestions || []).map((s, i) => {
                     const colors = [
                       'from-indigo-500/[0.08] to-purple-500/[0.08]', 'from-emerald-500/[0.08] to-teal-500/[0.08]',
@@ -534,33 +573,33 @@ export default function ChatPage() {
                 </div>
               </div>
             ) : (
-              <div className="py-6 space-y-5">
+              <div className="py-4 md:py-6 space-y-4 md:space-y-5">
                 {messages.map((msg, i) => (
                   <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`${msg.role === 'user' ? 'max-w-[75%]' : 'max-w-[85%] w-full'}`}>
+                    <div className={`${msg.role === 'user' ? 'max-w-[85%] md:max-w-[75%]' : 'md:max-w-[85%] w-full'}`}>
                       {msg.role === 'assistant' && (
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <div className="flex h-5 w-5 items-center justify-center rounded-md bg-gradient-to-br from-indigo-500 to-cyan-400">
-                              <Sparkles className="h-2.5 w-2.5 text-white" />
+                        <div className="flex items-center justify-between mb-1.5 md:mb-2">
+                          <div className="flex items-center gap-1.5 md:gap-2">
+                            <div className="flex h-4 w-4 md:h-5 md:w-5 items-center justify-center rounded-md bg-gradient-to-br from-indigo-500 to-cyan-400">
+                              <Sparkles className="h-2 w-2 md:h-2.5 md:w-2.5 text-white" />
                             </div>
-                            <span className="text-xs font-medium text-white/30">Assistant</span>
+                            <span className="text-[10px] md:text-xs font-medium text-white/30">Assistant</span>
                           </div>
                           {msg.content && (
                             <button onClick={() => humanize(i, msg.content)} disabled={humanizing === i}
-                              className="flex items-center gap-1 text-[10px] text-white/20 hover:text-emerald-400 px-1.5 py-0.5 rounded-md hover:bg-white/[0.03] transition-all disabled:opacity-30">
-                              <Feather className="h-3 w-3" />
+                              className="flex items-center gap-1 text-[9px] md:text-[10px] text-white/20 hover:text-emerald-400 px-1 md:px-1.5 py-0.5 rounded-md hover:bg-white/[0.03] transition-all disabled:opacity-30">
+                              <Feather className="h-2.5 w-2.5 md:h-3 md:w-3" />
                               {humanizing === i ? '...' : 'Humanize'}
                             </button>
                           )}
                         </div>
                       )}
                       {msg.role === 'user' ? (
-                        <div className="inline-block bg-indigo-500/10 text-white/85 rounded-2xl rounded-br-md px-4 py-2.5 text-sm leading-relaxed">
+                        <div className="inline-block bg-indigo-500/10 text-white/85 rounded-2xl rounded-br-md px-3 md:px-4 py-2 md:py-2.5 text-xs md:text-sm leading-relaxed">
                           {msg.content}
                         </div>
                       ) : (
-                        <div className="text-sm leading-relaxed text-white/70 [&_a]:text-cyan-400 [&_a:hover]:text-cyan-300 [&_a]:underline [&_a]:underline-offset-2 [&_a]:decoration-white/10 [&_strong]:text-white/85 [&_code]:bg-white/[0.06] [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_code]:font-mono [&_pre_code]:bg-transparent [&_pre_code]:p-0">
+                        <div className="text-xs md:text-sm leading-relaxed text-white/70 [&_a]:text-cyan-400 [&_a:hover]:text-cyan-300 [&_a]:underline [&_a]:underline-offset-2 [&_a]:decoration-white/10 [&_strong]:text-white/85 [&_code]:bg-white/[0.06] [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_code]:font-mono [&_pre_code]:bg-transparent [&_pre_code]:p-0">
                           {msg.content ? md(msg.content) : (
                             streaming && i === messages.length - 1 ? (
                               <span className="inline-flex gap-1">
@@ -583,8 +622,8 @@ export default function ChatPage() {
 
         {/* Quick Tools */}
         <div className="border-t border-white/[0.02] bg-[#0d0d1a] shrink-0">
-          <div className="mx-auto max-w-3xl px-4 pt-2 pb-1">
-            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-thin">
+          <div className="mx-auto w-full md:max-w-3xl px-3 md:px-4 pt-2 pb-1">
+            <div className="flex items-center gap-1 overflow-x-auto scrollbar-thin">
               {(mode === 'research' ? [
                 { icon: <AlignLeft className="h-3 w-3" />, label: 'Outline', prompt: 'Help me outline a research paper on' },
                 { icon: <FileText className="h-3 w-3" />, label: 'Abstract', prompt: 'Write an abstract for a paper about' },
@@ -628,8 +667,8 @@ export default function ChatPage() {
 
         {/* Input */}
         <div className="border-t border-white/[0.02] bg-[#0d0d1a] shrink-0">
-          <div className="mx-auto max-w-3xl px-4 py-3">
-            <div className="flex items-end gap-2 rounded-2xl border border-white/[0.06] bg-white/[0.03] px-4 py-3 focus-within:border-white/[0.12] transition-all">
+          <div className="mx-auto w-full md:max-w-3xl px-3 md:px-4 py-2 md:py-3">
+            <div className="flex items-end gap-2 rounded-xl md:rounded-2xl border border-white/[0.06] bg-white/[0.03] px-3 md:px-4 py-2 md:py-3 focus-within:border-white/[0.12] transition-all">
               <textarea
                 ref={inputRef as any}
                 value={input}
@@ -659,18 +698,18 @@ export default function ChatPage() {
 
       {/* Generate Paper Modal */}
       {showGenerate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-white/[0.06] bg-[#11111e] shadow-2xl p-5">
-            <div className="flex items-center justify-between mb-4">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="w-full md:max-w-md rounded-t-2xl md:rounded-2xl border border-white/[0.06] bg-[#11111e] shadow-2xl p-4 md:p-5 md:mx-4">
+            <div className="flex items-center justify-between mb-3 md:mb-4">
               <div className="flex items-center gap-2.5">
                 <FileDown className="h-4 w-4 text-emerald-400" />
-                <h2 className="text-sm font-medium text-white/70">Generate Research Paper</h2>
+                <h2 className="text-sm font-medium text-white/70">Generate Paper</h2>
               </div>
               <button onClick={() => { if (!generating) { setShowGenerate(false); setGenerateTopic(''); } }} className="text-white/20 hover:text-white/50 transition-colors">
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <p className="text-xs text-white/30 mb-3">Enter a topic and VEDA will search arXiv, write a complete paper, and download a DOCX.</p>
+            <p className="text-xs text-white/30 mb-3">Enter a topic and VEDA will write a complete paper with real arXiv references, then download as DOCX.</p>
             <input
               value={generateTopic}
               onChange={(e) => setGenerateTopic(e.target.value)}
@@ -696,9 +735,9 @@ export default function ChatPage() {
 
       {/* Settings Modal */}
       {showSettings && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-2xl border border-white/[0.06] bg-[#11111e] shadow-2xl">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.04]">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="w-full md:max-w-sm rounded-t-2xl md:rounded-2xl border border-white/[0.06] bg-[#11111e] shadow-2xl md:mx-4">
+            <div className="flex items-center justify-between px-4 md:px-5 py-3 md:py-4 border-b border-white/[0.04]">
               <div className="flex items-center gap-2.5">
                 <Key className="h-4 w-4 text-indigo-400" />
                 <h2 className="text-sm font-medium text-white/70">API Keys</h2>
@@ -707,7 +746,7 @@ export default function ChatPage() {
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="px-5 py-4 space-y-4">
+            <div className="px-4 md:px-5 py-4 space-y-3 md:space-y-4 max-h-[60vh] overflow-y-auto">
               <p className="text-xs text-white/30">Keys are stored locally and never sent anywhere else.</p>
               {providers.map(p => (
                 <div key={p.id}>
@@ -731,7 +770,7 @@ export default function ChatPage() {
                 </div>
               ))}
             </div>
-            <div className="flex items-center justify-between px-5 py-3 border-t border-white/[0.04]">
+            <div className="flex items-center justify-between px-4 md:px-5 py-3 border-t border-white/[0.04]">
               <span className={`text-xs ${keyStatus.includes('Saved') ? 'text-emerald-400' : 'text-white/20'}`}>{keyStatus}</span>
               <div className="flex gap-2">
                 <button onClick={() => setShowSettings(false)}
