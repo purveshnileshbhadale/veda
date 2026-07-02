@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, ReactNode } from 'react';
-// deploy: 02-jul-2026-2
 import { Send, Sparkles, Plus, Search, Settings, Key, Eye, EyeOff, X, MessageSquare, Trash2, PanelLeft, FileText, Feather, Copy, Check, ExternalLink, FileDown } from 'lucide-react';
 
 interface Message {
@@ -15,7 +14,8 @@ interface Conversation {
   messages: Message[];
 }
 
-const API = '/api/v1';
+let API = 'https://veda-backend.onrender.com/api/v1';
+if (typeof window !== 'undefined' && window.location.hostname === 'localhost') { API = 'http://localhost:8001/api/v1'; }
 
 const providers = [
   { id: 'gemini', label: 'Gemini', url: 'https://aistudio.google.com/app/apikey' },

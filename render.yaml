@@ -12,6 +12,6 @@ services:
       - key: GROQ_API_KEY
         sync: false
       - key: SECRET_KEY
-        generateValue: true
+        value: veda-render-secret-2026
       - key: CORS_ORIGINS
-        value: '["https://frontend-delta-weld-86.vercel.app","https://frontend-p7p1q3uwp-purveshnileshbhadales-projects.vercel.app"]'
+        value: '["https://frontend-delta-weld-86.vercel.app"]'

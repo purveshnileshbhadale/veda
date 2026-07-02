@@ -6,7 +6,8 @@ import os
 
 settings = get_settings()
 
-os.makedirs("./data", exist_ok=True)
+os.makedirs("./data", exist_ok=True)           # backend/data/ for the SQLite DB
+os.makedirs("../data", exist_ok=True)          # root data/ for api_keys.json
 
 async_engine = create_async_engine(
     settings.DATABASE_URL,
