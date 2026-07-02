@@ -190,7 +190,7 @@ export default function ChatPage() {
     let t = localStorage.getItem('access_token');
     if (t) return t;
     try {
-      const r = await fetch('${API}/auth/auto-login', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+      const r = await fetch(`${API}/auth/auto-login`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
       if (r.ok) { const d = await r.json(); localStorage.setItem('access_token', d.access_token); return d.access_token; }
     } catch {}
     return null;
@@ -202,7 +202,7 @@ export default function ChatPage() {
     const t = await ensureToken();
     if (!t) return;
     try {
-      const r = await fetch('${API}/auth/keys', { headers: { 'Authorization': `Bearer ${t}` } });
+      const r = await fetch(`${API}/auth/keys`, { headers: { 'Authorization': `Bearer ${t}` } });
       if (r.ok) setConfigured((await r.json()).configured || {});
     } catch {}
   };
@@ -211,7 +211,7 @@ export default function ChatPage() {
     const t = await ensureToken();
     if (!t) { setKeyStatus('Auth failed'); return; }
     try {
-      const r = await fetch('${API}/auth/keys', { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` }, body: JSON.stringify(apiKeys) });
+      const r = await fetch(`${API}/auth/keys`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` }, body: JSON.stringify(apiKeys) });
       if (r.ok) { setKeyStatus('Saved'); fetchKeyStatus(); setTimeout(() => setKeyStatus(''), 2000); }
       else { setKeyStatus('Failed'); }
     } catch { setKeyStatus('Error'); }
@@ -254,7 +254,7 @@ export default function ChatPage() {
     abortRef.current = controller;
 
     try {
-      const res = await fetch('${API}/ai/chat/stream', {
+      const res = await fetch(`${API}/ai/chat/stream`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token()}` },
         body: JSON.stringify({ messages: currentMsgs }), signal: controller.signal,
       });
@@ -299,7 +299,7 @@ export default function ChatPage() {
     const t = await ensureToken();
     if (!t || !active) return;
     try {
-      const r = await fetch('${API}/ai/export/docx', {
+      const r = await fetch(`${API}/ai/export/docx`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` },
         body: JSON.stringify({ messages: active.messages }),
       });
@@ -319,7 +319,7 @@ export default function ChatPage() {
     if (!t || !activeId) return;
     setHumanizing(msgIdx);
     try {
-      const r = await fetch('${API}/ai/humanize', {
+      const r = await fetch(`${API}/ai/humanize`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` },
         body: JSON.stringify({ text }),
       });
@@ -342,7 +342,7 @@ export default function ChatPage() {
     if (!t) return;
     setGenerating(true);
     try {
-      const r = await fetch('${API}/ai/generate-paper', {
+      const r = await fetch(`${API}/ai/generate-paper`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` },
         body: JSON.stringify({ topic }),
       });
