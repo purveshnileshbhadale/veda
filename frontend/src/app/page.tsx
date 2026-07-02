@@ -14,7 +14,8 @@ interface Conversation {
   messages: Message[];
 }
 
-let API = 'https://veda-backend.onrender.com/api/v1';
+let API = 'https://4ebfe6bede66af51-103-183-84-23.serveousercontent.com/api/v1';
+// Permanent: https://veda-backend.onrender.com/api/v1 (Render deploy pending)
 if (typeof window !== 'undefined' && window.location.hostname === 'localhost') { API = 'http://localhost:8001/api/v1'; }
 
 const providers = [
