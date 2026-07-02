@@ -18,7 +18,7 @@ class AuthService:
             raise ValueError("Email or username already registered")
         
         user = User(
-            id=uuid.uuid4(),
+            id=str(uuid.uuid4()),
             email=data.email,
             username=data.username,
             hashed_password=hash_password(data.password),
@@ -29,7 +29,7 @@ class AuthService:
         self.db.add(user)
         
         profile = UserProfile(
-            id=uuid.uuid4(),
+            id=str(uuid.uuid4()),
             user_id=user.id,
         )
         self.db.add(profile)
@@ -91,14 +91,14 @@ class AuthService:
             }
         }
 
-    async def get_user(self, user_id: uuid.UUID) -> User:
+    async def get_user(self, user_id: str) -> User:
         result = await self.db.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
         if not user:
             raise ValueError("User not found")
         return user
 
-    async def update_profile(self, user_id: uuid.UUID, data: dict) -> User:
+    async def update_profile(self, user_id: str, data: dict) -> User:
         result = await self.db.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
         if not user:
@@ -117,7 +117,7 @@ class AuthService:
         
         if not user:
             user = User(
-                id=uuid.uuid4(),
+                id=str(uuid.uuid4()),
                 email="local@veda.app",
                 username="local",
                 hashed_password=hash_password("local"),
@@ -126,7 +126,7 @@ class AuthService:
             )
             self.db.add(user)
             profile = UserProfile(
-                id=uuid.uuid4(),
+                id=str(uuid.uuid4()),
                 user_id=user.id,
             )
             self.db.add(profile)

@@ -1,11 +1,7 @@
-from sqlalchemy import Column, String, Boolean, DateTime, Text, ForeignKey, Enum as SAEnum
+from sqlalchemy import Column, String, Boolean, DateTime, Text, ForeignKey, Enum as SAEnum, JSON
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy import JSON
 from app.db.base import Base, TimestampMixin
-import uuid
-from datetime import datetime
-import enum
+import uuid, enum
 
 class UserRole(str, enum.Enum):
     RESEARCHER = "researcher"
@@ -16,7 +12,7 @@ class UserRole(str, enum.Enum):
 class User(Base, TimestampMixin):
     __tablename__ = "users"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     email = Column(String(255), unique=True, nullable=False, index=True)
     username = Column(String(100), unique=True, nullable=False, index=True)
     hashed_password = Column(String(255), nullable=False)
@@ -36,8 +32,8 @@ class User(Base, TimestampMixin):
 class UserProfile(Base, TimestampMixin):
     __tablename__ = "user_profiles"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
     bio = Column(Text, nullable=True)
     website = Column(String(500), nullable=True)
     github = Column(String(255), nullable=True)
