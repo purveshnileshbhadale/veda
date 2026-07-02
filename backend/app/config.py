@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     
     # Free AI Providers - configure which ones you want to use
     GEMINI_API_KEY: Optional[str] = None
-    GROQ_API_KEY: Optional[str] = "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"
+    GROQ_API_KEY: Optional[str] = None
     OPENROUTER_API_KEY: Optional[str] = None
     DEEPSEEK_API_KEY: Optional[str] = None
     
@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE: int = 50 * 1024 * 1024
     ALLOWED_EXTENSIONS: List[str] = [".pdf", ".txt", ".md", ".csv", ".json", ".bib", ".docx"]
     
-    CORS_ORIGINS: str = '["http://localhost:3000","http://127.0.0.1:3000"]'
+    CORS_ORIGINS: str = '["http://localhost:3000","http://127.0.0.1:3000","https://frontend-delta-weld-86.vercel.app"]'
 
     class Config:
         env_file = ".env"

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, ReactNode } from 'react';
+// deploy: 02-jul-2026-2
 import { Send, Sparkles, Plus, Search, Settings, Key, Eye, EyeOff, X, MessageSquare, Trash2, PanelLeft, FileText, Feather, Copy, Check, ExternalLink, FileDown } from 'lucide-react';
 
 interface Message {
@@ -14,7 +15,7 @@ interface Conversation {
   messages: Message[];
 }
 
-const API = process.env.NEXT_PUBLIC_API_URL || '${API}';
+const API = '/api/v1';
 
 const providers = [
   { id: 'gemini', label: 'Gemini', url: 'https://aistudio.google.com/app/apikey' },
