@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE: int = 50 * 1024 * 1024
     ALLOWED_EXTENSIONS: List[str] = [".pdf", ".txt", ".md", ".csv", ".json", ".bib", ".docx"]
     
-    CORS_ORIGINS: str = '["http://localhost:3000","http://127.0.0.1:3000","https://frontend-delta-weld-86.vercel.app","https://4ebfe6bede66af51-103-183-84-23.serveousercontent.com"]'
+    CORS_ORIGINS: str = '["http://localhost:3000","http://127.0.0.1:3000","https://frontend-delta-weld-86.vercel.app"]'
 
     class Config:
         env_file = ".env"

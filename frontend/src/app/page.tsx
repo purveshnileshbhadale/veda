@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, ReactNode } from 'react';
-import { Send, Sparkles, Plus, Search, Settings, Key, Eye, EyeOff, X, MessageSquare, Trash2, PanelLeft, FileText, Feather, Copy, Check, ExternalLink, FileDown } from 'lucide-react';
+import { Send, Sparkles, Plus, Search, Settings, Key, Eye, EyeOff, X, MessageSquare, Trash2, PanelLeft, FileText, Feather, Copy, Check, ExternalLink, FileDown, BookOpen, Globe, Library, Lightbulb, PenLine, ScrollText, Quote, Download, AlignLeft, Languages, ListChecks } from 'lucide-react';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -14,8 +14,7 @@ interface Conversation {
   messages: Message[];
 }
 
-let API = 'https://4ebfe6bede66af51-103-183-84-23.serveousercontent.com/api/v1';
-// Permanent: https://veda-backend.onrender.com/api/v1 (Render deploy pending)
+let API = 'https://veda-backend-lcjt.onrender.com/api/v1';
 if (typeof window !== 'undefined' && window.location.hostname === 'localhost') { API = 'http://localhost:8001/api/v1'; }
 
 const providers = [
@@ -23,6 +22,56 @@ const providers = [
   { id: 'groq', label: 'Groq', url: 'https://console.groq.com/keys' },
   { id: 'openrouter', label: 'OpenRouter', url: 'https://openrouter.ai/keys' },
   { id: 'deepseek', label: 'DeepSeek', url: 'https://platform.deepseek.com/api_keys' },
+];
+
+interface ModeConfig {
+  id: string; label: string; icon: ReactNode; desc: string; placeholder: string; color: string; btnColor: string;
+  suggestions: { text: string; sub: string }[];
+}
+
+const modes: ModeConfig[] = [
+  { id: 'research', label: 'Research', icon: <BookOpen className="h-3.5 w-3.5" />, desc: 'Write & improve papers', placeholder: 'Ask about your research paper...', color: 'from-indigo-500 to-cyan-400', btnColor: 'border-indigo-500/10 hover:border-indigo-500/30',
+    suggestions: [
+      { text: 'Help me outline a research paper about climate change adaptation', sub: 'Outline generation' },
+      { text: 'Find recent papers on transformer architectures in NLP', sub: 'arXiv paper search' },
+      { text: 'Improve my abstract for clarity and impact', sub: 'Writing polish' },
+      { text: 'Suggest citations for my methodology section', sub: 'Citation help' },
+    ]},
+  { id: 'mun', label: 'MUN', icon: <Globe className="h-3.5 w-3.5" />, desc: 'Model UN preparation', placeholder: 'Ask about MUN position papers, speeches...', color: 'from-emerald-500 to-teal-400', btnColor: 'border-emerald-500/10 hover:border-emerald-500/30',
+    suggestions: [
+      { text: 'Write a position paper for France on AI regulation', sub: 'Position paper' },
+      { text: 'Draft a resolution on climate financing for developing nations', sub: 'Resolution drafting' },
+      { text: 'Write a 1-minute opening speech for India on cybersecurity', sub: 'Opening speech' },
+      { text: 'Summarize China stance on South China Sea for UNSC', sub: 'Country research' },
+    ]},
+  { id: 'literature', label: 'Lit Review', icon: <Library className="h-3.5 w-3.5" />, desc: 'Find & synthesize papers', placeholder: 'Search papers, synthesize findings...', color: 'from-violet-500 to-purple-400', btnColor: 'border-violet-500/10 hover:border-violet-500/30',
+    suggestions: [
+      { text: 'Summarize recent advances in quantum machine learning', sub: 'Literature synthesis' },
+      { text: 'Find research gaps in federated learning for healthcare', sub: 'Gap analysis' },
+      { text: 'Compare transformer vs CNN approaches in medical imaging', sub: 'Paper comparison' },
+      { text: 'Generate a BibTeX bibliography on reinforcement learning', sub: 'Citation export' },
+    ]},
+  { id: 'brainstorm', label: 'Ideas', icon: <Lightbulb className="h-3.5 w-3.5" />, desc: 'Generate & refine ideas', placeholder: 'Brainstorm research ideas...', color: 'from-amber-500 to-orange-400', btnColor: 'border-amber-500/10 hover:border-amber-500/30',
+    suggestions: [
+      { text: 'What are some novel research questions in computational biology?', sub: 'Idea generation' },
+      { text: 'How can blockchain technology be applied to academic publishing?', sub: 'Cross-disciplinary' },
+      { text: 'What if we combined GANs with reinforcement learning for drug discovery?', sub: 'Provocative question' },
+      { text: 'Suggest innovative methodologies for studying social media polarization', sub: 'Methodology design' },
+    ]},
+  { id: 'editor', label: 'Editor', icon: <PenLine className="h-3.5 w-3.5" />, desc: 'Polish academic writing', placeholder: 'Paste text to edit or polish...', color: 'from-rose-500 to-pink-400', btnColor: 'border-rose-500/10 hover:border-rose-500/30',
+    suggestions: [
+      { text: 'Improve the clarity of this paragraph about statistical methods', sub: 'Clarity polish' },
+      { text: 'Make this abstract more concise and impactful', sub: 'Conciseness' },
+      { text: 'Check this methodology section for logical gaps', sub: 'Argument check' },
+      { text: 'Format these citations in APA style', sub: 'Citation formatting' },
+    ]},
+  { id: 'review', label: 'Review', icon: <ScrollText className="h-3.5 w-3.5" />, desc: 'Peer review simulator', placeholder: 'Paste a draft to get peer review...', color: 'from-cyan-500 to-blue-400', btnColor: 'border-cyan-500/10 hover:border-cyan-500/30',
+    suggestions: [
+      { text: 'Review this introduction for clarity and positioning', sub: 'Introduction review' },
+      { text: 'Critique my methodology — are there validity threats?', sub: 'Methods critique' },
+      { text: 'Assess the contribution and novelty of this work', sub: 'Contribution assessment' },
+      { text: 'Give me a full peer review of this discussion section', sub: 'Full review' },
+    ]},
 ];
 
 function md(text: string): ReactNode[] {
@@ -175,6 +224,8 @@ export default function ChatPage() {
   const [showGenerate, setShowGenerate] = useState(false);
   const [generateTopic, setGenerateTopic] = useState('');
   const [generating, setGenerating] = useState(false);
+  const [mode, setMode] = useState('research');
+  const [showModeMenu, setShowModeMenu] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -257,7 +308,7 @@ export default function ChatPage() {
     try {
       const res = await fetch(`${API}/ai/chat/stream`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token()}` },
-        body: JSON.stringify({ messages: currentMsgs }), signal: controller.signal,
+        body: JSON.stringify({ messages: currentMsgs, mode }), signal: controller.signal,
       });
       if (!res.ok) throw new Error('Stream failed');
       const reader = res.body?.getReader();
@@ -433,31 +484,53 @@ export default function ChatPage() {
           </div>
         </header>
 
+        {/* Mode Bar */}
+        <div className="flex items-center gap-1.5 px-3 py-2 border-b border-white/[0.03] bg-[#0a0a16] overflow-x-auto scrollbar-thin shrink-0">
+          <span className="text-[10px] text-white/20 font-mono mr-1 shrink-0 uppercase tracking-wider">Mode</span>
+          {modes.map(m => (
+            <button key={m.id} onClick={() => setMode(m.id)}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all shrink-0 ${
+                mode === m.id
+                  ? `bg-gradient-to-r ${m.color} text-white shadow-sm`
+                  : 'text-white/40 hover:text-white/70 hover:bg-white/[0.04] border border-transparent'
+              }`}>
+              <span className={mode === m.id ? 'text-white' : 'text-white/30'}>{m.icon}</span>
+              {m.label}
+            </button>
+          ))}
+        </div>
+
         {/* Messages */}
         <div className="flex-1 overflow-y-auto scrollbar-thin">
           <div className="mx-auto max-w-3xl px-4">
             {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center min-h-[75vh] text-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-cyan-400 shadow-lg shadow-indigo-500/15 mb-5">
-                  <Sparkles className="h-7 w-7 text-white" />
+                <div className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br shadow-lg mb-5 ${
+                  modes.find(m => m.id === mode)?.color || 'from-indigo-500 to-cyan-400'
+                } ${mode === 'research' ? 'shadow-indigo-500/15' : mode === 'mun' ? 'shadow-emerald-500/15' : mode === 'literature' ? 'shadow-violet-500/15' : mode === 'brainstorm' ? 'shadow-amber-500/15' : mode === 'editor' ? 'shadow-rose-500/15' : 'shadow-cyan-500/15'}`}>
+                  {modes.find(m => m.id === mode)?.icon || <Sparkles className="h-7 w-7 text-white" />}
                 </div>
-                <h1 className="text-xl font-semibold text-white/85 mb-1.5">How can I help?</h1>
+                <h1 className="text-xl font-semibold text-white/85 mb-1.5">{modes.find(m => m.id === mode)?.label || 'How can I help?'}</h1>
                 <p className="text-sm text-white/35 mb-7 max-w-md leading-relaxed">
-                  Research paper writing assistant — outline, write, find sources, and improve your academic work.
+                  {modes.find(m => m.id === mode)?.desc || 'Research paper writing assistant'}
                 </p>
                 <div className="grid gap-2 w-full max-w-lg">
-                  {[
-                    { text: 'Help me outline a research paper...', color: 'from-indigo-500/[0.08] to-purple-500/[0.08]', border: 'border-indigo-500/10' },
-                    { text: 'Find recent papers about a topic', color: 'from-emerald-500/[0.08] to-teal-500/[0.08]', border: 'border-emerald-500/10' },
-                    { text: 'Improve my abstract for clarity', color: 'from-amber-500/[0.08] to-orange-500/[0.08]', border: 'border-amber-500/10' },
-                    { text: 'Suggest citations for my section', color: 'from-rose-500/[0.08] to-pink-500/[0.08]', border: 'border-rose-500/10' },
-                  ].map((s, i) => (
-                    <button key={i} onClick={() => { setInput(s.text); inputRef.current?.focus(); }}
-                      className={`flex items-center gap-3 rounded-xl border ${s.border} ${s.color} px-4 py-3 text-left text-sm text-white/60 hover:text-white hover:border-white/15 transition-all group`}>
-                      <Search className="h-4 w-4 text-white/20 group-hover:text-white/50" />
-                      <span>{s.text}</span>
-                    </button>
-                  ))}
+                  {(modes.find(m => m.id === mode)?.suggestions || []).map((s, i) => {
+                    const colors = [
+                      'from-indigo-500/[0.08] to-purple-500/[0.08]', 'from-emerald-500/[0.08] to-teal-500/[0.08]',
+                      'from-amber-500/[0.08] to-orange-500/[0.08]', 'from-rose-500/[0.08] to-pink-500/[0.08]',
+                    ];
+                    const borders = [
+                      'border-indigo-500/10', 'border-emerald-500/10', 'border-amber-500/10', 'border-rose-500/10',
+                    ];
+                    return (
+                      <button key={i} onClick={() => { setInput(s.text); inputRef.current?.focus(); }}
+                        className={`flex items-center gap-3 rounded-xl border ${borders[i % 4]} ${colors[i % 4]} px-4 py-3 text-left text-sm text-white/60 hover:text-white hover:border-white/15 transition-all group`}>
+                        <Search className="h-4 w-4 text-white/20 group-hover:text-white/50 shrink-0" />
+                        <div className="text-left"><span>{s.text}</span><div className="text-[10px] text-white/20 mt-0.5">{s.sub}</div></div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             ) : (
@@ -508,8 +581,53 @@ export default function ChatPage() {
           </div>
         </div>
 
+        {/* Quick Tools */}
+        <div className="border-t border-white/[0.02] bg-[#0d0d1a] shrink-0">
+          <div className="mx-auto max-w-3xl px-4 pt-2 pb-1">
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-thin">
+              {(mode === 'research' ? [
+                { icon: <AlignLeft className="h-3 w-3" />, label: 'Outline', prompt: 'Help me outline a research paper on' },
+                { icon: <FileText className="h-3 w-3" />, label: 'Abstract', prompt: 'Write an abstract for a paper about' },
+                { icon: <Search className="h-3 w-3" />, label: 'Find Papers', prompt: 'Find recent papers about' },
+                { icon: <Quote className="h-3 w-3" />, label: 'Cite', prompt: 'Generate citations in APA format for the topic:' },
+              ] : mode === 'mun' ? [
+                { icon: <Globe className="h-3 w-3" />, label: 'Position Paper', prompt: 'Write a position paper for ' },
+                { icon: <ScrollText className="h-3 w-3" />, label: 'Resolution', prompt: 'Draft a UN resolution on ' },
+                { icon: <PenLine className="h-3 w-3" />, label: 'Speech', prompt: 'Write a 1-minute opening speech for ' },
+                { icon: <Library className="h-3 w-3" />, label: 'Country Brief', prompt: 'Summarize the stance of ' },
+              ] : mode === 'literature' ? [
+                { icon: <BookOpen className="h-3 w-3" />, label: 'Summarize', prompt: 'Summarize the key papers on ' },
+                { icon: <ListChecks className="h-3 w-3" />, label: 'Compare', prompt: 'Compare and contrast different approaches to ' },
+                { icon: <Search className="h-3 w-3" />, label: 'Find Gaps', prompt: 'What are the research gaps in ' },
+                { icon: <Quote className="h-3 w-3" />, label: 'BibTeX', prompt: 'Generate BibTeX references for papers about ' },
+              ] : mode === 'brainstorm' ? [
+                { icon: <Lightbulb className="h-3 w-3" />, label: 'Ideas', prompt: 'Generate novel research ideas for ' },
+                { icon: <Search className="h-3 w-3" />, label: 'What If', prompt: 'What if we combine ' },
+                { icon: <BookOpen className="h-3 w-3" />, label: 'Methodology', prompt: 'Suggest innovative methodologies for studying ' },
+                { icon: <FileText className="h-3 w-3" />, label: 'Grant Idea', prompt: 'Suggest a grant-worthy research direction for ' },
+              ] : mode === 'editor' ? [
+                { icon: <PenLine className="h-3 w-3" />, label: 'Improve', prompt: 'Improve the clarity of this text:\n\n' },
+                { icon: <Languages className="h-3 w-3" />, label: 'Paraphrase', prompt: 'Paraphrase this to be more concise:\n\n' },
+                { icon: <Check className="h-3 w-3" />, label: 'Proofread', prompt: 'Proofread this for grammar and style:\n\n' },
+                { icon: <AlignLeft className="h-3 w-3" />, label: 'Condense', prompt: 'Condense this to half the length:\n\n' },
+              ] : [
+                { icon: <ScrollText className="h-3 w-3" />, label: 'Review', prompt: 'Provide a peer review of the following:\n\n' },
+                { icon: <Search className="h-3 w-3" />, label: 'Check Methods', prompt: 'Critique the methodology described here:\n\n' },
+                { icon: <BookOpen className="h-3 w-3" />, label: 'Check Citations', prompt: 'Are the citations in this section appropriate?\n\n' },
+                { icon: <ListChecks className="h-3 w-3" />, label: 'Full Review', prompt: 'Give me a comprehensive peer review:\n\n' },
+              ]).map((tool, i) => (
+                <button key={i} onClick={() => { setInput(tool.prompt); inputRef.current?.focus(); }}
+                  className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] text-white/30 hover:text-white/60 hover:bg-white/[0.04] transition-colors shrink-0 whitespace-nowrap">
+                  {tool.icon}
+                  {tool.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
         {/* Input */}
-        <div className="border-t border-white/[0.03] bg-[#0d0d1a] shrink-0">
+        <div className="border-t border-white/[0.02] bg-[#0d0d1a] shrink-0">
           <div className="mx-auto max-w-3xl px-4 py-3">
             <div className="flex items-end gap-2 rounded-2xl border border-white/[0.06] bg-white/[0.03] px-4 py-3 focus-within:border-white/[0.12] transition-all">
               <textarea
@@ -517,7 +635,7 @@ export default function ChatPage() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask about your research paper..."
+                placeholder={modes.find(m => m.id === mode)?.placeholder || 'Ask about your research paper...'}
                 className="flex-1 bg-transparent text-sm text-white/70 outline-none placeholder:text-white/15 resize-none py-0.5 max-h-32"
                 disabled={streaming}
                 rows={1}
@@ -534,7 +652,7 @@ export default function ChatPage() {
                 </button>
               )}
             </div>
-            <p className="text-[10px] text-white/15 text-center mt-2 font-mono">VEDA — Research Paper AI</p>
+            <p className="text-[10px] text-white/15 text-center mt-2 font-mono">VEDA — {modes.find(m => m.id === mode)?.label || 'Research'} Mode</p>
           </div>
         </div>
       </div>
