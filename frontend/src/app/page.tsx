@@ -226,6 +226,10 @@ export default function ChatPage() {
   const [generating, setGenerating] = useState(false);
   const [mode, setMode] = useState('research');
   const [showModeMenu, setShowModeMenu] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [copiedMsgId, setCopiedMsgId] = useState<number | null>(null);
+  const [speakingIdx, setSpeakingIdx] = useState<number | null>(null);
+  const [showWordCount, setShowWordCount] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -233,6 +237,7 @@ export default function ChatPage() {
   const active = conversations.find(c => c.id === activeId);
   const messages = active?.messages || [];
   const hasAnyKey = Object.values(configured).some(Boolean);
+  const filtered = conversations.filter(c => c.title.toLowerCase().includes(searchQuery.toLowerCase()));
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
   useEffect(() => { if (!streaming) inputRef.current?.focus(); }, [streaming]);
@@ -387,6 +392,18 @@ export default function ChatPage() {
     setHumanizing(null);
   };
 
+  const exportTxt = () => {
+    if (!active) return;
+    const txt = active.messages.map(m => `${m.role === 'user' ? 'You' : 'VEDA'}:\n${m.content}`).join('\n\n---\n\n');
+    const blob = new Blob([txt], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${active.title.slice(0, 40).replace(/[^a-zA-Z0-9]/g, '_')}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const generatePaper = async () => {
     const topic = generateTopic.trim();
     if (!topic || generating) return;
@@ -427,8 +444,21 @@ export default function ChatPage() {
             New chat
           </button>
         </div>
+        <div className="px-2 pb-1">
+          <div className="relative">
+            <Search className="h-3 w-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-white/15" />
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search conversations..."
+              className="w-full h-7 rounded-lg bg-white/[0.04] border border-white/[0.04] pl-7 pr-2 text-xs text-white/50 outline-none placeholder:text-white/15 focus:border-white/[0.1] transition-colors"
+            />
+          </div>
+        </div>
         <div className="flex-1 overflow-y-auto px-2 space-y-0.5">
-          {conversations.map(c => (
+          {filtered.length === 0 ? (
+            <p className="text-[10px] text-white/15 text-center pt-4">No conversations found</p>
+          ) : filtered.map(c => (
             <div key={c.id}
               className={`group flex items-center gap-2 rounded-xl px-3 py-2 text-sm cursor-pointer transition-colors ${
                 c.id === activeId ? 'bg-white/[0.07] text-white' : 'text-white/40 hover:bg-white/[0.03] hover:text-white/70'
@@ -464,8 +494,21 @@ export default function ChatPage() {
                 New chat
               </button>
             </div>
+            <div className="px-2 pb-1">
+              <div className="relative">
+                <Search className="h-3 w-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-white/15" />
+                <input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search conversations..."
+                  className="w-full h-7 rounded-lg bg-white/[0.04] border border-white/[0.04] pl-7 pr-2 text-xs text-white/50 outline-none placeholder:text-white/15 focus:border-white/[0.1] transition-colors"
+                />
+              </div>
+            </div>
             <div className="flex-1 overflow-y-auto px-2 space-y-0.5">
-              {conversations.map(c => (
+              {filtered.length === 0 ? (
+                <p className="text-[10px] text-white/15 text-center pt-4">No conversations found</p>
+              ) : filtered.map(c => (
                 <div key={c.id}
                   className={`group flex items-center gap-2 rounded-xl px-3 py-2 text-sm cursor-pointer transition-colors ${
                     c.id === activeId ? 'bg-white/[0.07] text-white' : 'text-white/40 hover:bg-white/[0.03] hover:text-white/70'
@@ -513,11 +556,18 @@ export default function ChatPage() {
               Generate
             </button>
             {active && active.messages.length > 0 && (
-              <button onClick={exportDocx}
-                className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-white/60 px-2 py-1 rounded-lg hover:bg-white/[0.03] transition-colors">
-                <FileText className="h-3 w-3" />
-                DOCX
-              </button>
+              <>
+                <button onClick={exportDocx}
+                  className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-white/60 px-2 py-1 rounded-lg hover:bg-white/[0.03] transition-colors">
+                  <FileText className="h-3 w-3" />
+                  DOCX
+                </button>
+                <button onClick={exportTxt}
+                  className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-white/60 px-2 py-1 rounded-lg hover:bg-white/[0.03] transition-colors">
+                  <Download className="h-3 w-3" />
+                  TXT
+                </button>
+              </>
             )}
             <span className="text-[11px] text-white/20 ml-2 font-mono">VEDA</span>
           </div>
@@ -584,14 +634,38 @@ export default function ChatPage() {
                               <Sparkles className="h-2 w-2 md:h-2.5 md:w-2.5 text-white" />
                             </div>
                             <span className="text-[10px] md:text-xs font-medium text-white/30">Assistant</span>
+                            {msg.content && (
+                              <span className="text-[8px] text-white/15 font-mono">
+                                {msg.content.split(/\s+/).length}w · {msg.content.length}c
+                              </span>
+                            )}
                           </div>
-                          {msg.content && (
-                            <button onClick={() => humanize(i, msg.content)} disabled={humanizing === i}
-                              className="flex items-center gap-1 text-[9px] md:text-[10px] text-white/20 hover:text-emerald-400 px-1 md:px-1.5 py-0.5 rounded-md hover:bg-white/[0.03] transition-all disabled:opacity-30">
-                              <Feather className="h-2.5 w-2.5 md:h-3 md:w-3" />
-                              {humanizing === i ? '...' : 'Humanize'}
-                            </button>
-                          )}
+                          <div className="flex items-center gap-0.5">
+                            {msg.content && (
+                              <>
+                                <button onClick={() => humanize(i, msg.content)} disabled={humanizing === i}
+                                  className="flex items-center gap-1 text-[9px] md:text-[10px] text-white/20 hover:text-emerald-400 px-1 md:px-1.5 py-0.5 rounded-md hover:bg-white/[0.03] transition-all disabled:opacity-30">
+                                  <Feather className="h-2.5 w-2.5 md:h-3 md:w-3" />
+                                  {humanizing === i ? '...' : 'Humanize'}
+                                </button>
+                                <button onClick={() => { navigator.clipboard.writeText(msg.content); setCopiedMsgId(i); setTimeout(() => setCopiedMsgId(null), 1500); }}
+                                  className="text-white/20 hover:text-white/60 px-1 py-0.5 rounded-md hover:bg-white/[0.03] transition-all">
+                                  {copiedMsgId === i ? <Check className="h-2.5 w-2.5 md:h-3 md:w-3 text-emerald-400" /> : <Copy className="h-2.5 w-2.5 md:h-3 md:w-3" />}
+                                </button>
+                                <button onClick={() => {
+                                  if (speakingIdx === i) { speechSynthesis.cancel(); setSpeakingIdx(null); return; }
+                                  setSpeakingIdx(i);
+                                  const u = new SpeechSynthesisUtterance(msg.content);
+                                  u.lang = 'en-US'; u.rate = 0.9; u.pitch = 1;
+                                  u.onend = () => setSpeakingIdx(null);
+                                  speechSynthesis.speak(u);
+                                }}
+                                  className="text-white/20 hover:text-cyan-400 px-1 py-0.5 rounded-md hover:bg-white/[0.03] transition-all">
+                                  {speakingIdx === i ? <span className="text-[9px] font-mono text-cyan-400">■</span> : <svg className="h-2.5 w-2.5 md:h-3 md:w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>}
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </div>
                       )}
                       {msg.role === 'user' ? (
