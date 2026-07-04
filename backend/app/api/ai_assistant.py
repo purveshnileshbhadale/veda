@@ -121,9 +121,11 @@ Think like a senior experimental scientist. Be rigorous about methodology. Chall
 class ChatRequest(BaseModel):
     messages: List[Dict[str, str]]
     mode: str = "research"
+    api_key: Optional[str] = None
 
 class HumanizeRequest(BaseModel):
     text: str
+    api_key: Optional[str] = None
 
 class PaperSearchRequest(BaseModel):
     query: str
@@ -186,7 +188,7 @@ async def chat_stream(
 
     system_prompt = SYSTEM_PROMPTS.get(body.mode, SYSTEM_PROMPTS["research"])
     full_messages = [{"role": "system", "content": system_prompt + paper_context}] + body.messages
-    client = AIClient()
+    client = AIClient(api_key=body.api_key)
     async def generate():
         async for chunk in client.chat_stream(full_messages):
             yield f"data: {chunk}\n\n"
@@ -238,16 +240,17 @@ async def search_papers(body: PaperSearchRequest):
 
 @router.post("/humanize")
 async def humanize(body: HumanizeRequest, current_user: User = Depends(get_current_user)):
-    client = AIClient()
+    client = AIClient(api_key=body.api_key)
     prompt = f"""Rewrite the following text to sound more natural and human-like, as if written by an experienced researcher rather than an AI. Vary sentence structure, use natural transitions, and avoid robotic or repetitive phrasing. Keep the same information and academic tone, but make it flow naturally.
-
-Text to humanize:
-{body.text}"""
-    result = await client.chat([{"role": "system", "content": "You are an expert at making AI-generated academic text sound natural and human-like."}, {"role": "user", "content": prompt}])
-    return {"result": result}
-
-class GeneratePaperRequest(BaseModel):
-    topic: str
+ 
+ Text to humanize:
+ {body.text}"""
+     result = await client.chat([{"role": "system", "content": "You are an expert at making AI-generated academic text sound natural and human-like."}, {"role": "user", "content": prompt}])
+     return {"result": result}
+ 
+ class GeneratePaperRequest(BaseModel):
+     topic: str
+     api_key: Optional[str] = None
 
 @router.post("/generate-paper")
 async def generate_paper(body: GeneratePaperRequest, current_user: User = Depends(get_current_user)):
@@ -256,7 +259,7 @@ async def generate_paper(body: GeneratePaperRequest, current_user: User = Depend
     if papers:
         refs = f"\n\nUse these real papers as references. Cite them in the text and include them in the reference list:\n{papers}"
 
-    client = AIClient()
+    client = AIClient(api_key=body.api_key)
     prompt = f"""Write a complete academic research paper on the topic: "{body.topic}"
 
 Format the paper with these sections:

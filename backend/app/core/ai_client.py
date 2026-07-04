@@ -27,13 +27,13 @@ def _get_key(provider: str) -> Optional[str]:
     return saved.get(provider) or env_key
 
 class AIClient:
-    def __init__(self, provider: Optional[str] = None):
+    def __init__(self, provider: Optional[str] = None, api_key: Optional[str] = None):
         self.provider = provider or settings.AI_PROVIDER
         self._client: Optional[Any] = None
-        self._initialize_client()
+        self._initialize_client(api_key)
 
-    def _initialize_client(self):
-        key = _get_key(self.provider)
+    def _initialize_client(self, key_override: Optional[str] = None):
+        key = key_override or _get_key(self.provider)
         if not key:
             return
 
