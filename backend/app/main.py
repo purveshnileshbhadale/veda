@@ -34,7 +34,24 @@ async def startup():
     await init_db()
     db = SyncSessionLocal()
     try:
-        if settings.ADMIN_BOOTSTRAP_USERNAME and settings.ADMIN_BOOTSTRAP_PASSWORD:
+        user_count = db.query(User).count()
+        if user_count == 0:
+            from datetime import datetime
+            admin = User(
+                id=str(uuid.uuid4()),
+                username="admin",
+                email="admin@veda.local",
+                hashed_password=hash_password("admin123"),
+                full_name="Admin",
+                role=UserRole.ADMIN,
+                is_active=True,
+                is_verified=True,
+                created_at=datetime.utcnow(),
+            )
+            db.add(admin)
+            db.commit()
+            print("Created default admin user (admin / admin123)")
+        elif settings.ADMIN_BOOTSTRAP_USERNAME and settings.ADMIN_BOOTSTRAP_PASSWORD:
             existing = db.query(User).filter(User.role == UserRole.ADMIN).first()
             if not existing:
                 from datetime import datetime

@@ -50,20 +50,7 @@ def get_active_keys() -> dict:
 async def register(data: UserCreate, db: AsyncSession = Depends(get_db)):
     service = AuthService(db)
     try:
-        result = await service.register(data)
-        from sqlalchemy import select, func
-        count = await db.execute(select(func.count(User.id)))
-        total = count.scalar()
-        if total == 1:
-            r = await db.execute(select(User).where(User.username == data.username))
-            u = r.scalar_one_or_none()
-            if u:
-                u.role = UserRole.ADMIN
-                await db.commit()
-                await db.refresh(u)
-                from app.schemas.user import UserResponse
-                result.user = UserResponse.model_validate(u)
-        return result
+        return await service.register(data)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
