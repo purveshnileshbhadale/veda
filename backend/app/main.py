@@ -1,9 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
-from app.db.session import init_db
+from app.db.session import init_db, SyncSessionLocal
 from app.api import auth, ai_assistant, conversations
-import os, json
+from app.models.user import User, UserRole
+from app.core.security import hash_password
+import os, json, uuid
 
 settings = get_settings()
 
@@ -30,6 +32,35 @@ app.include_router(conversations.router, prefix=settings.API_PREFIX)
 @app.on_event("startup")
 async def startup():
     await init_db()
+    db = SyncSessionLocal()
+    try:
+        if settings.ADMIN_BOOTSTRAP_USERNAME and settings.ADMIN_BOOTSTRAP_PASSWORD:
+            existing = db.query(User).filter(User.role == UserRole.ADMIN).first()
+            if not existing:
+                from datetime import datetime
+                admin = User(
+                    id=str(uuid.uuid4()),
+                    username=settings.ADMIN_BOOTSTRAP_USERNAME,
+                    email=settings.ADMIN_BOOTSTRAP_EMAIL or f"{settings.ADMIN_BOOTSTRAP_USERNAME}@veda.local",
+                    hashed_password=hash_password(settings.ADMIN_BOOTSTRAP_PASSWORD),
+                    full_name="Admin",
+                    role=UserRole.ADMIN,
+                    is_active=True,
+                    is_verified=True,
+                    created_at=datetime.utcnow(),
+                )
+                db.add(admin)
+                db.commit()
+                print(f"Bootstrapped admin user: {settings.ADMIN_BOOTSTRAP_USERNAME}")
+
+        if settings.DEVELOPER_BOOTSTRAP_USERNAME:
+            user = db.query(User).filter(User.username == settings.DEVELOPER_BOOTSTRAP_USERNAME).first()
+            if user and user.role != UserRole.DEVELOPER:
+                user.role = UserRole.DEVELOPER
+                db.commit()
+                print(f"Promoted existing user '{user.username}' to developer")
+    finally:
+        db.close()
 
 @app.get(f"{settings.API_PREFIX}/health")
 async def health_check():

@@ -4,8 +4,11 @@ from sqlalchemy import select
 from app.db.session import get_db
 from app.models.conversation import Conversation
 from app.schemas.conversation import ConversationCreate, ConversationUpdate, ConversationResponse
-from app.core.security import get_current_user
-from app.models.user import User
+from app.core.security import get_current_user, require_admin_or_developer
+from app.models.user import User, UserRole
+from typing import List, Optional
+from datetime import datetime
+from pydantic import BaseModel
 import uuid
 
 router = APIRouter(prefix="/conversations", tags=["Conversations"])
@@ -53,3 +56,41 @@ async def delete_conversation(conv_id: str, current_user: User = Depends(get_cur
     await db.delete(conv)
     await db.flush()
     return {"status": "deleted"}
+
+class AdminConversationResponse(BaseModel):
+    id: str
+    user_id: str
+    username: str
+    full_name: Optional[str] = None
+    email: Optional[str] = None
+    title: str
+    messages: list
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+@router.get("/all", response_model=List[AdminConversationResponse])
+async def list_all_conversations(
+    current_user: User = Depends(require_admin_or_developer),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Conversation).order_by(Conversation.updated_at.desc()).limit(200)
+    )
+    convs = result.scalars().all()
+    out = []
+    for c in convs:
+        out.append({
+            "id": c.id,
+            "user_id": c.user_id,
+            "username": c.user.username if c.user else "deleted",
+            "full_name": c.user.full_name if c.user else None,
+            "email": c.user.email if c.user else None,
+            "title": c.title,
+            "messages": c.messages,
+            "created_at": c.created_at,
+            "updated_at": c.updated_at,
+        })
+    return out

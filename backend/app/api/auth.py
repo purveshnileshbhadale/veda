@@ -6,9 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.schemas.user import UserCreate, UserLogin, UserResponse, TokenResponse, UserProfileUpdate
 from app.services.auth_service import AuthService
-from app.core.security import get_current_user
-from app.models.user import User
+from app.core.security import get_current_user, require_admin
+from app.models.user import User, UserRole
 from pydantic import BaseModel
+from typing import List
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -84,6 +85,58 @@ async def auto_login(db: AsyncSession = Depends(get_db)):
         return await service.auto_login()
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+class PromoteRequest(BaseModel):
+    username: str
+    role: str = "developer"
+
+@router.post("/promote")
+async def promote_user(
+    data: PromoteRequest,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    from sqlalchemy import select
+    result = await db.execute(select(User).where(User.username == data.username))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail=f"User '{data.username}' not found")
+    if data.role not in [r.value for r in UserRole]:
+        raise HTTPException(status_code=400, detail=f"Invalid role. Valid: {[r.value for r in UserRole]}")
+    old_role = user.role.value
+    user.role = UserRole(data.role)
+    await db.commit()
+    return {"message": f"Promoted '{data.username}' from {old_role} -> {data.role}"}
+
+class UserAdminResponse(BaseModel):
+    id: str
+    email: str
+    username: str
+    full_name: str
+    role: str
+    is_active: bool
+    is_verified: bool
+    created_at: str
+    last_login: Optional[str] = None
+
+@router.get("/users", response_model=List[UserAdminResponse])
+async def list_users(
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    from sqlalchemy import select
+    result = await db.execute(select(User).order_by(User.created_at.desc()))
+    users = result.scalars().all()
+    return [
+        UserAdminResponse(
+            id=u.id, email=u.email, username=u.username,
+            full_name=u.full_name, role=u.role.value,
+            is_active=u.is_active, is_verified=u.is_verified,
+            created_at=u.created_at.isoformat() if u.created_at else "",
+            last_login=u.last_login.isoformat() if u.last_login else None,
+        )
+        for u in users
+    ]
 
 @router.get("/keys")
 async def get_keys(current_user: User = Depends(get_current_user)):

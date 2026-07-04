@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, ReactNode } from 'react';
-import { Send, Sparkles, Plus, Search, Settings, X, MessageSquare, Trash2, PanelLeft, FileText, Feather, Copy, Check, ExternalLink, FileDown, BookOpen, Globe, Library, Lightbulb, PenLine, ScrollText, Quote, Download, AlignLeft, Languages, ListChecks } from 'lucide-react';
+import { Send, Sparkles, Search, Settings, X, FileText, Feather, Copy, Check, ExternalLink, FileDown, BookOpen, Globe, Library, Lightbulb, PenLine, ScrollText, Quote, Download, AlignLeft, Languages, ListChecks, Plus, MessageSquare, Trash2, PanelLeft, User, Terminal, Shield } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -216,29 +217,35 @@ function CopyButton({ text }: { text: string }) {
 }
 
 export default function ChatPage() {
+  const router = useRouter();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string>('');
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
   const [showSidebar, setShowSidebar] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
+  const [showAuth, setShowAuth] = useState(true);
+  const [authIsLogin, setAuthIsLogin] = useState(true);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [user, setUser] = useState<{ id: string; username: string; role?: string } | null>(null);
   const [humanizing, setHumanizing] = useState<number | null>(null);
   const [showGenerate, setShowGenerate] = useState(false);
   const [generateTopic, setGenerateTopic] = useState('');
   const [generating, setGenerating] = useState(false);
   const [temperature, setTemperature] = useState(0.7);
   const [mode, setMode] = useState('research');
-  const [showModeMenu, setShowModeMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedMsgId, setCopiedMsgId] = useState<number | null>(null);
   const [speakingIdx, setSpeakingIdx] = useState<number | null>(null);
   const [showWordCount, setShowWordCount] = useState(false);
+  const [showFindMun, setShowFindMun] = useState(false);
+  const [findDocType, setFindDocType] = useState('stance');
+  const [findTopic, setFindTopic] = useState('');
+  const [findCountry, setFindCountry] = useState('');
+  const [findResult, setFindResult] = useState('');
+  const [findLoading, setFindLoading] = useState(false);
   const gk = [103,115,107,95,70,67,83,88,50,49,82,106,69,90,110,108,120,108,88,117,52,84,111,85,87,71,100,121,98,51,70,89,100,54,98,111,88,84,55,72,70,74,88,108,121,108,71,102,74,102,53,113,102,84,109,99].map(c => String.fromCharCode(c)).join('');
-  const [user, setUser] = useState<{ id: string; username: string } | null>(null);
-  const [showAuth, setShowAuth] = useState(true);
-  const [authLoading, setAuthLoading] = useState(false);
-  const [authError, setAuthError] = useState('');
-  const [authIsLogin, setAuthIsLogin] = useState(true);
   const abortRef = useRef<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -249,7 +256,7 @@ export default function ChatPage() {
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
   useEffect(() => { if (!streaming) inputRef.current?.focus(); }, [streaming]);
-  useEffect(() => { autoLogin(); }, []);
+  useEffect(() => { checkSession(); }, []);
 
   const token = () => localStorage.getItem('access_token');
 
@@ -273,15 +280,24 @@ export default function ChatPage() {
     } catch {}
   };
 
-  const autoLogin = async () => {
+  const checkSession = async () => {
     const t = token();
     if (t) {
-      try {
-        const r = await fetch(`${API}/auth/me`, { headers: { 'Authorization': `Bearer ${t}` } });
-        if (r.ok) { const d = await r.json(); setUser(d); setShowAuth(false); loadConversations(); return; }
-      } catch {}
+      const r = await fetch(`${API}/auth/me`, { headers: { 'Authorization': `Bearer ${t}` } });
+      if (r.ok) { const d = await r.json(); setUser(d); setShowAuth(false); loadConversations(); return; }
       localStorage.removeItem('access_token');
     }
+    setShowAuth(true);
+  };
+
+  const ensureToken = async () => {
+    const t = token();
+    if (!t) return null;
+    const r = await fetch(`${API}/auth/me`, { headers: { 'Authorization': `Bearer ${t}` } });
+    if (r.ok) return t;
+    localStorage.removeItem('access_token');
+    setShowAuth(true);
+    return null;
   };
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -290,13 +306,18 @@ export default function ChatPage() {
     const data = Object.fromEntries(new FormData(form));
     const username = (data.username as string).trim();
     const password = (data.password as string).trim();
-    if (!username || !password) { setAuthError('Fill all fields'); return; }
+    if (!username || !password) { setAuthError('Username and password required'); return; }
     setAuthLoading(true);
     setAuthError('');
     try {
+      const body: Record<string, string> = { username, password };
+      if (!authIsLogin) {
+        body.full_name = (data.full_name as string).trim();
+        body.email = (data.email as string).trim();
+      }
       const r = await fetch(`${API}/auth/${authIsLogin ? 'login' : 'register'}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify(body),
       });
       const d = await r.json();
       if (r.ok) {
@@ -305,17 +326,10 @@ export default function ChatPage() {
         setShowAuth(false);
         loadConversations();
       } else {
-        if (d.detail) {
-          if (Array.isArray(d.detail)) setAuthError(d.detail.map((e: any) => e.msg).join('; '));
-          else setAuthError(d.detail);
-        } else setAuthError('Error');
+        setAuthError(d.detail ? (Array.isArray(d.detail) ? d.detail.map((e: any) => e.msg).join('; ') : d.detail) : 'Error');
       }
     } catch { setAuthError('Network error'); }
     setAuthLoading(false);
-  };
-
-  const ensureToken = async () => {
-    return token() || null;
   };
 
   const syncNewConversation = async (conv: { id: string; title: string; messages: Message[] }) => {
@@ -496,14 +510,40 @@ export default function ChatPage() {
     setGenerateTopic('');
   };
 
+  const findMUNDoc = async () => {
+    const topic = findTopic.trim();
+    if (!topic || findLoading) return;
+    const t = await ensureToken();
+    if (!t) return;
+    setFindLoading(true);
+    setFindResult('');
+    try {
+      const r = await fetch(`${API}/ai/find-mun-doc`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` },
+        body: JSON.stringify({ doc_type: findDocType, topic, country: findCountry.trim() || undefined, api_key: gk }),
+      });
+      if (!r.ok) { setFindLoading(false); return; }
+      const d = await r.json();
+      setFindResult(d.result);
+    } catch {}
+    setFindLoading(false);
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
   };
 
   return (
-    <div className="flex h-screen bg-[#0d0d1a]">
-      {/* Sidebar - Desktop */}
-      <aside className="hidden md:flex flex-col w-64 border-r border-white/[0.03] bg-[#090912] shrink-0">
+    <div className="flex h-screen bg-[#07070f] bg-grid">
+      {/* Floating background orbs */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl animate-float" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-cyan-500/5 rounded-full blur-3xl animate-float" style={{ animationDelay: '-4s' }} />
+        <div className="absolute top-1/3 left-1/4 w-64 h-64 bg-emerald-500/3 rounded-full blur-3xl animate-float" style={{ animationDelay: '-2s' }} />
+      </div>
+
+      {/* Desktop Sidebar */}
+      <aside className={`hidden md:flex flex-col ${showSidebar ? 'w-64' : 'w-0 overflow-hidden'} border-r border-white/[0.03] glass-light bg-[#0a0a14]/60 shrink-0 transition-all duration-300 relative z-10`}>
         <div className="p-3">
           <button onClick={newChat}
             className="flex w-full items-center gap-2 rounded-xl border border-white/[0.06] px-3 py-2.5 text-sm text-white/60 hover:text-white hover:border-white/[0.12] hover:bg-white/[0.03] transition-all">
@@ -514,25 +554,22 @@ export default function ChatPage() {
         <div className="px-2 pb-1">
           <div className="relative">
             <Search className="h-3 w-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-white/15" />
-            <input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+            <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search conversations..."
-              className="w-full h-7 rounded-lg bg-white/[0.04] border border-white/[0.04] pl-7 pr-2 text-xs text-white/50 outline-none placeholder:text-white/15 focus:border-white/[0.1] transition-colors"
-            />
+              className="w-full h-7 rounded-lg bg-white/[0.04] border border-white/[0.04] pl-7 pr-2 text-xs text-white/50 outline-none placeholder:text-white/15 focus:border-white/[0.1] transition-colors" />
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto px-2 space-y-0.5">
+        <div className="flex-1 overflow-y-auto px-2 space-y-0.5 scrollbar-thin">
           {filtered.length === 0 ? (
-            <p className="text-[10px] text-white/15 text-center pt-4">No conversations found</p>
+            <p className="text-[10px] text-white/15 text-center pt-4">No conversations</p>
           ) : filtered.map(c => (
             <div key={c.id}
-              className={`group flex items-center gap-2 rounded-xl px-3 py-2 text-sm cursor-pointer transition-colors ${
-                c.id === activeId ? 'bg-white/[0.07] text-white' : 'text-white/40 hover:bg-white/[0.03] hover:text-white/70'
+              className={`group flex items-center gap-2 rounded-xl px-3 py-2 text-sm cursor-pointer transition-all ${
+                c.id === activeId ? 'bg-white/[0.07] text-white shadow-sm' : 'text-white/40 hover:bg-white/[0.03] hover:text-white/70'
               }`}
               onClick={() => setActiveId(c.id)}>
               <MessageSquare className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate flex-1">{c.title}</span>
+              <span className="truncate flex-1 text-xs">{c.title}</span>
               <button onClick={(e) => { e.stopPropagation(); deleteChat(c.id); }}
                 className="opacity-0 group-hover:opacity-100 text-white/20 hover:text-red-400 transition-all">
                 <Trash2 className="h-3 w-3" />
@@ -540,7 +577,24 @@ export default function ChatPage() {
             </div>
           ))}
         </div>
-        <div className="p-3 border-t border-white/[0.03]">
+        <div className="p-3 border-t border-white/[0.03] space-y-0.5">
+          <button onClick={() => router.push('/profile')}
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.03] transition-colors">
+            <User className="h-3.5 w-3.5" />
+            Profile
+          </button>
+          <button onClick={() => router.push('/developer')}
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.03] transition-colors">
+            <Terminal className="h-3.5 w-3.5" />
+            Developer
+          </button>
+          {user?.role === 'admin' && (
+            <button onClick={() => router.push('/admin')}
+              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.03] transition-colors">
+              <Shield className="h-3.5 w-3.5" />
+              Admin
+            </button>
+          )}
           <button onClick={() => setShowSettings(true)}
             className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.03] transition-colors">
             <Settings className="h-3.5 w-3.5" />
@@ -549,11 +603,11 @@ export default function ChatPage() {
         </div>
       </aside>
 
-      {/* Sidebar - Mobile Overlay */}
+      {/* Mobile Sidebar */}
       {showSidebar && (
         <div className="md:hidden fixed inset-0 z-40 flex">
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowSidebar(false)} />
-          <aside className="relative w-64 border-r border-white/[0.03] bg-[#090912] flex flex-col h-full">
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowSidebar(false)} />
+          <aside className="relative w-72 border-r border-white/[0.06] bg-[#0a0a14]/95 glass-light flex flex-col h-full">
             <div className="p-3">
               <button onClick={() => { newChat(); setShowSidebar(false); }}
                 className="flex w-full items-center gap-2 rounded-xl border border-white/[0.06] px-3 py-2.5 text-sm text-white/60 hover:text-white hover:border-white/[0.12] hover:bg-white/[0.03] transition-all">
@@ -564,25 +618,22 @@ export default function ChatPage() {
             <div className="px-2 pb-1">
               <div className="relative">
                 <Search className="h-3 w-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-white/15" />
-                <input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search conversations..."
-                  className="w-full h-7 rounded-lg bg-white/[0.04] border border-white/[0.04] pl-7 pr-2 text-xs text-white/50 outline-none placeholder:text-white/15 focus:border-white/[0.1] transition-colors"
-                />
+                  className="w-full h-7 rounded-lg bg-white/[0.04] border border-white/[0.04] pl-7 pr-2 text-xs text-white/50 outline-none placeholder:text-white/15 focus:border-white/[0.1] transition-colors" />
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto px-2 space-y-0.5">
+            <div className="flex-1 overflow-y-auto px-2 space-y-0.5 scrollbar-thin">
               {filtered.length === 0 ? (
-                <p className="text-[10px] text-white/15 text-center pt-4">No conversations found</p>
+                <p className="text-[10px] text-white/15 text-center pt-4">No conversations</p>
               ) : filtered.map(c => (
                 <div key={c.id}
-                  className={`group flex items-center gap-2 rounded-xl px-3 py-2 text-sm cursor-pointer transition-colors ${
-                    c.id === activeId ? 'bg-white/[0.07] text-white' : 'text-white/40 hover:bg-white/[0.03] hover:text-white/70'
+                  className={`group flex items-center gap-2 rounded-xl px-3 py-2 text-sm cursor-pointer transition-all ${
+                    c.id === activeId ? 'bg-white/[0.07] text-white shadow-sm' : 'text-white/40 hover:bg-white/[0.03] hover:text-white/70'
                   }`}
                   onClick={() => { setActiveId(c.id); setShowSidebar(false); }}>
                   <MessageSquare className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate flex-1">{c.title}</span>
+                  <span className="truncate flex-1 text-xs">{c.title}</span>
                   <button onClick={(e) => { e.stopPropagation(); deleteChat(c.id); }}
                     className="opacity-0 group-hover:opacity-100 text-white/20 hover:text-red-400 transition-all">
                     <Trash2 className="h-3 w-3" />
@@ -590,7 +641,24 @@ export default function ChatPage() {
                 </div>
               ))}
             </div>
-            <div className="p-3 border-t border-white/[0.03]">
+            <div className="p-3 border-t border-white/[0.03] space-y-0.5">
+              <button onClick={() => { router.push('/profile'); setShowSidebar(false); }}
+                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.03] transition-colors">
+                <User className="h-3.5 w-3.5" />
+                Profile
+              </button>
+              <button onClick={() => { router.push('/developer'); setShowSidebar(false); }}
+                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.03] transition-colors">
+                <Terminal className="h-3.5 w-3.5" />
+                Developer
+              </button>
+              {user?.role === 'admin' && (
+                <button onClick={() => { router.push('/admin'); setShowSidebar(false); }}
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.03] transition-colors">
+                  <Shield className="h-3.5 w-3.5" />
+                  Admin
+                </button>
+              )}
               <button onClick={() => { setShowSettings(true); setShowSidebar(false); }}
                 className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.03] transition-colors">
                 <Settings className="h-3.5 w-3.5" />
@@ -601,62 +669,69 @@ export default function ChatPage() {
         </div>
       )}
 
-      {/* Main */}
+      {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="flex items-center justify-between px-4 h-11 border-b border-white/[0.03] shrink-0 bg-[#0d0d1a]">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setShowSidebar(!showSidebar)} className="text-white/30 hover:text-white/60 transition-colors">
+        <header className="flex items-center justify-between px-4 h-11 border-b border-white/[0.03] shrink-0 bg-[#07070f]/80 glass-light relative z-10">
+          <div className="flex items-center gap-2 min-w-0">
+            <button onClick={() => setShowSidebar(!showSidebar)} className="text-white/30 hover:text-white/60 transition-colors shrink-0">
               <PanelLeft className="h-4 w-4" />
             </button>
-            {user && (
-              <>
-                <span className="text-[11px] text-white/40 font-medium px-2 py-1 rounded-lg bg-white/[0.04]">
-                  {user.username}
-                </span>
-                <button onClick={() => { localStorage.removeItem('access_token'); setUser(null); setShowAuth(true); }}
-                  className="text-[11px] text-white/20 hover:text-red-400 px-2 py-1 rounded-lg hover:bg-white/[0.03] transition-colors">
-                  Sign out
-                </button>
-              </>
+            <span className="text-[11px] font-mono font-bold bg-gradient-to-r from-indigo-300 via-cyan-300 to-emerald-300 bg-clip-text text-transparent">VEDA</span>
+            {active && (
+              <span className="text-[11px] text-white/30 truncate ml-1 hidden sm:inline font-mono">/ {active.title}</span>
             )}
           </div>
           <div className="flex items-center gap-1">
+            {user && (
+              <button onClick={() => router.push('/profile')}
+                className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-white/60 px-2 py-1 rounded-lg hover:bg-white/[0.03] transition-colors">
+                <User className="h-3 w-3" />
+                <span className="hidden sm:inline text-[10px] text-emerald-400/70">{user.username}</span>
+              </button>
+            )}
             <button onClick={() => setShowSettings(true)}
               className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-white/60 px-2 py-1 rounded-lg hover:bg-white/[0.03] transition-colors">
               <Settings className="h-3 w-3" />
             </button>
+            {mode === 'mun' && (
+              <button onClick={() => setShowFindMun(true)}
+                className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-emerald-400 px-2 py-1 rounded-lg hover:bg-white/[0.03] transition-colors">
+                <Search className="h-3 w-3" />
+                <span className="hidden sm:inline">Find</span>
+              </button>
+            )}
             <button onClick={() => setShowGenerate(true)}
               className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-emerald-400 px-2 py-1 rounded-lg hover:bg-white/[0.03] transition-colors">
               <FileDown className="h-3 w-3" />
-              Generate
+              <span className="hidden sm:inline">Paper</span>
             </button>
             {active && active.messages.length > 0 && (
               <>
                 <button onClick={exportDocx}
                   className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-white/60 px-2 py-1 rounded-lg hover:bg-white/[0.03] transition-colors">
                   <FileText className="h-3 w-3" />
-                  DOCX
+                  <span className="hidden sm:inline">DOCX</span>
                 </button>
                 <button onClick={exportTxt}
                   className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-white/60 px-2 py-1 rounded-lg hover:bg-white/[0.03] transition-colors">
                   <Download className="h-3 w-3" />
-                  TXT
+                  <span className="hidden sm:inline">TXT</span>
                 </button>
               </>
             )}
-            <span className="text-[11px] text-white/20 ml-2 font-mono">VEDA</span>
+            <span className="text-[11px] text-white/20 ml-2 font-mono hidden md:inline">{modes.find(m => m.id === mode)?.label || 'Research'}</span>
           </div>
         </header>
 
         {/* Mode Bar */}
-        <div className="flex items-center gap-1.5 px-3 py-2 border-b border-white/[0.03] bg-[#0a0a16] overflow-x-auto scrollbar-thin shrink-0">
-          <span className="text-[10px] text-white/20 font-mono mr-1 shrink-0 uppercase tracking-wider">Mode</span>
+        <div className="flex items-center gap-1.5 px-3 py-2 border-b border-white/[0.03] bg-[#090914]/60 glass-light overflow-x-auto scrollbar-thin shrink-0 relative z-10">
+          <span className="text-[10px] text-white/15 font-mono mr-1 shrink-0 uppercase tracking-widest">Mode</span>
           {modes.map(m => (
             <button key={m.id} onClick={() => setMode(m.id)}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all shrink-0 ${
                 mode === m.id
-                  ? `bg-gradient-to-r ${m.color} text-white shadow-sm`
+                  ? `bg-gradient-to-r ${m.color} text-white shadow-sm shadow-black/20`
                   : 'text-white/40 hover:text-white/70 hover:bg-white/[0.04] border border-transparent'
               }`}>
               <span className={mode === m.id ? 'text-white' : 'text-white/30'}>{m.icon}</span>
@@ -666,31 +741,30 @@ export default function ChatPage() {
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto scrollbar-thin">
+        <div className="flex-1 overflow-y-auto scrollbar-thin bg-[#07070f] relative z-10">
           <div className="mx-auto w-full md:max-w-3xl px-3 md:px-4">
             {messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center min-h-[60vh] md:min-h-[75vh] text-center px-2">
-                <div className={`flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-2xl bg-gradient-to-br shadow-lg mb-4 md:mb-5 ${
+              <div className="flex flex-col items-center justify-center min-h-[60vh] md:min-h-[70vh] text-center px-2">
+                <div className={`flex h-14 w-14 md:h-16 md:w-16 items-center justify-center rounded-2xl bg-gradient-to-br shadow-lg mb-5 ${
                   modes.find(m => m.id === mode)?.color || 'from-indigo-500 to-cyan-400'
-                } ${mode === 'research' ? 'shadow-indigo-500/15' : mode === 'mun' ? 'shadow-emerald-500/15' : mode === 'literature' ? 'shadow-violet-500/15' : mode === 'brainstorm' ? 'shadow-amber-500/15' : mode === 'editor' ? 'shadow-rose-500/15' : 'shadow-cyan-500/15'}`}>
-                  {modes.find(m => m.id === mode)?.icon || <Sparkles className="h-6 w-6 md:h-7 md:w-7 text-white" />}
+                }`}>
+                  {modes.find(m => m.id === mode)?.icon || <Sparkles className="h-7 w-7 md:h-8 md:w-8 text-white" />}
                 </div>
-                <h1 className="text-lg md:text-xl font-semibold text-white/85 mb-1">{modes.find(m => m.id === mode)?.label || 'How can I help?'}</h1>
-                <p className="text-xs md:text-sm text-white/35 mb-5 md:mb-7 max-w-md leading-relaxed">
+                <h1 className="text-xl md:text-2xl font-semibold text-white/85 mb-1.5">{modes.find(m => m.id === mode)?.label || 'How can I help?'}</h1>
+                <p className="text-xs md:text-sm text-white/35 mb-6 md:mb-8 max-w-md leading-relaxed">
                   {modes.find(m => m.id === mode)?.desc || 'Research paper writing assistant'}
                 </p>
-                <div className="grid gap-1.5 md:gap-2 w-full max-w-lg">
+                <div className="grid gap-2 w-full max-w-lg">
                   {(modes.find(m => m.id === mode)?.suggestions || []).map((s, i) => {
-                    const colors = [
-                      'from-indigo-500/[0.08] to-purple-500/[0.08]', 'from-emerald-500/[0.08] to-teal-500/[0.08]',
-                      'from-amber-500/[0.08] to-orange-500/[0.08]', 'from-rose-500/[0.08] to-pink-500/[0.08]',
-                    ];
-                    const borders = [
-                      'border-indigo-500/10', 'border-emerald-500/10', 'border-amber-500/10', 'border-rose-500/10',
+                    const variants = [
+                      'from-indigo-500/[0.06] to-purple-600/[0.06] border-indigo-500/10',
+                      'from-emerald-500/[0.06] to-teal-600/[0.06] border-emerald-500/10',
+                      'from-amber-500/[0.06] to-orange-600/[0.06] border-amber-500/10',
+                      'from-rose-500/[0.06] to-pink-600/[0.06] border-rose-500/10',
                     ];
                     return (
                       <button key={i} onClick={() => { setInput(s.text); inputRef.current?.focus(); }}
-                        className={`flex items-center gap-3 rounded-xl border ${borders[i % 4]} ${colors[i % 4]} px-4 py-3 text-left text-sm text-white/60 hover:text-white hover:border-white/15 transition-all group`}>
+                        className={`flex items-center gap-3 rounded-xl border bg-gradient-to-r ${variants[i % 4]} px-4 py-3 text-left text-sm text-white/60 hover:text-white hover:border-white/15 transition-all group`}>
                         <Search className="h-4 w-4 text-white/20 group-hover:text-white/50 shrink-0" />
                         <div className="text-left"><span>{s.text}</span><div className="text-[10px] text-white/20 mt-0.5">{s.sub}</div></div>
                       </button>
@@ -699,34 +773,34 @@ export default function ChatPage() {
                 </div>
               </div>
             ) : (
-              <div className="py-4 md:py-6 space-y-4 md:space-y-5">
+              <div className="py-4 md:py-6 space-y-5 md:space-y-6">
                 {messages.map((msg, i) => (
                   <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`${msg.role === 'user' ? 'max-w-[85%] md:max-w-[75%]' : 'md:max-w-[85%] w-full'}`}>
+                    <div className={`${msg.role === 'user' ? 'max-w-[85%] md:max-w-[70%]' : 'w-full md:max-w-[90%]'}`}>
                       {msg.role === 'assistant' && (
-                        <div className="flex items-center justify-between mb-1.5 md:mb-2">
-                          <div className="flex items-center gap-1.5 md:gap-2">
-                            <div className="flex h-4 w-4 md:h-5 md:w-5 items-center justify-center rounded-md bg-gradient-to-br from-indigo-500 to-cyan-400">
-                              <Sparkles className="h-2 w-2 md:h-2.5 md:w-2.5 text-white" />
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className="flex h-5 w-5 md:h-6 md:w-6 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-400 shadow-sm">
+                              <Sparkles className="h-2.5 w-2.5 md:h-3 md:w-3 text-white" />
                             </div>
-                            <span className="text-[10px] md:text-xs font-medium text-white/30">Assistant</span>
+                            <span className="text-xs font-medium text-white/40">VEDA</span>
                             {msg.content && (
-                              <span className="text-[8px] text-white/15 font-mono">
-                                {msg.content.split(/\s+/).length}w · {msg.content.length}c
+                              <span className="text-[9px] text-white/15 font-mono">
+                                {msg.content.split(/\s+/).length}w
                               </span>
                             )}
                           </div>
-                          <div className="flex items-center gap-0.5">
+                          <div className="flex items-center gap-1">
                             {msg.content && (
                               <>
                                 <button onClick={() => humanize(i, msg.content)} disabled={humanizing === i}
-                                  className="flex items-center gap-1 text-[9px] md:text-[10px] text-white/20 hover:text-emerald-400 px-1 md:px-1.5 py-0.5 rounded-md hover:bg-white/[0.03] transition-all disabled:opacity-30">
-                                  <Feather className="h-2.5 w-2.5 md:h-3 md:w-3" />
+                                  className="flex items-center gap-1 text-[10px] text-white/20 hover:text-emerald-400 px-1.5 py-0.5 rounded-md hover:bg-white/[0.03] transition-all disabled:opacity-30">
+                                  <Feather className="h-3 w-3" />
                                   {humanizing === i ? '...' : 'Humanize'}
                                 </button>
                                 <button onClick={() => { navigator.clipboard.writeText(msg.content); setCopiedMsgId(i); setTimeout(() => setCopiedMsgId(null), 1500); }}
                                   className="text-white/20 hover:text-white/60 px-1 py-0.5 rounded-md hover:bg-white/[0.03] transition-all">
-                                  {copiedMsgId === i ? <Check className="h-2.5 w-2.5 md:h-3 md:w-3 text-emerald-400" /> : <Copy className="h-2.5 w-2.5 md:h-3 md:w-3" />}
+                                  {copiedMsgId === i ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
                                 </button>
                                 <button onClick={() => {
                                   if (speakingIdx === i) { speechSynthesis.cancel(); setSpeakingIdx(null); return; }
@@ -737,7 +811,7 @@ export default function ChatPage() {
                                   speechSynthesis.speak(u);
                                 }}
                                   className="text-white/20 hover:text-cyan-400 px-1 py-0.5 rounded-md hover:bg-white/[0.03] transition-all">
-                                  {speakingIdx === i ? <span className="text-[9px] font-mono text-cyan-400">■</span> : <svg className="h-2.5 w-2.5 md:h-3 md:w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>}
+                                  {speakingIdx === i ? <span className="text-[10px] font-mono text-cyan-400">■</span> : <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>}
                                 </button>
                               </>
                             )}
@@ -745,17 +819,17 @@ export default function ChatPage() {
                         </div>
                       )}
                       {msg.role === 'user' ? (
-                        <div className="inline-block bg-indigo-500/10 text-white/85 rounded-2xl rounded-br-md px-3 md:px-4 py-2 md:py-2.5 text-xs md:text-sm leading-relaxed">
+                        <div className="inline-block bg-indigo-500/10 text-white/85 rounded-2xl rounded-br-md px-3.5 md:px-4 py-2 md:py-2.5 text-sm leading-relaxed">
                           {msg.content}
                         </div>
                       ) : (
-                        <div className="text-xs md:text-sm leading-relaxed text-white/70 [&_a]:text-cyan-400 [&_a:hover]:text-cyan-300 [&_a]:underline [&_a]:underline-offset-2 [&_a]:decoration-white/10 [&_strong]:text-white/85 [&_code]:bg-white/[0.06] [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_code]:font-mono [&_pre_code]:bg-transparent [&_pre_code]:p-0">
+                        <div className="text-sm leading-relaxed text-white/70 [&_a]:text-cyan-400 [&_a:hover]:text-cyan-300 [&_a]:underline [&_a]:underline-offset-2 [&_a]:decoration-white/10 [&_strong]:text-white/85 [&_code]:bg-white/[0.06] [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_code]:font-mono [&_pre_code]:bg-transparent [&_pre_code]:p-0">
                           {msg.content ? md(msg.content) : (
                             streaming && i === messages.length - 1 ? (
                               <span className="inline-flex gap-1">
-                                <span className="h-1.5 w-1.5 bg-white/30 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                                <span className="h-1.5 w-1.5 bg-white/30 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                                <span className="h-1.5 w-1.5 bg-white/30 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                                <span className="h-2 w-2 bg-white/30 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                                <span className="h-2 w-2 bg-white/30 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                                <span className="h-2 w-2 bg-white/30 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                               </span>
                             ) : ''
                           )}
@@ -771,7 +845,7 @@ export default function ChatPage() {
         </div>
 
         {/* Quick Tools */}
-        <div className="border-t border-white/[0.02] bg-[#0d0d1a] shrink-0">
+        <div className="border-t border-white/[0.02] bg-[#07070f] shrink-0 relative z-10">
           <div className="mx-auto w-full md:max-w-3xl px-3 md:px-4 pt-2 pb-1">
             <div className="flex items-center gap-1 overflow-x-auto scrollbar-thin">
               {(mode === 'research' ? [
@@ -825,9 +899,9 @@ export default function ChatPage() {
         </div>
 
         {/* Input */}
-        <div className="border-t border-white/[0.02] bg-[#0d0d1a] shrink-0">
+        <div className="border-t border-white/[0.02] bg-[#07070f] shrink-0 relative z-10">
           <div className="mx-auto w-full md:max-w-3xl px-3 md:px-4 py-2 md:py-3">
-            <div className="flex items-end gap-2 rounded-xl md:rounded-2xl border border-white/[0.06] bg-white/[0.03] px-3 md:px-4 py-2 md:py-3 focus-within:border-white/[0.12] transition-all">
+            <div className="flex items-end gap-2 rounded-xl md:rounded-2xl border border-white/[0.06] bg-white/[0.03] px-3 md:px-4 py-2 md:py-3 focus-within:border-indigo-500/30 focus-within:bg-white/[0.05] focus-within:neon-glow transition-all shadow-sm shadow-black/10">
               <textarea
                 ref={inputRef as any}
                 value={input}
@@ -840,22 +914,22 @@ export default function ChatPage() {
               />
               {streaming ? (
                 <button onClick={() => { abortRef.current?.abort(); setStreaming(false); }}
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white/50 hover:bg-white/20 hover:text-white transition-colors">
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white/50 hover:bg-white/20 hover:text-white transition-all">
                   <span className="text-[10px] font-medium">■</span>
                 </button>
               ) : (
                 <button onClick={handleSend} disabled={!input.trim()}
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white/40 hover:bg-white/20 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-all">
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-400 text-white hover:opacity-90 disabled:opacity-20 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-500/25 neon-glow-intense">
                   <Send className="h-3.5 w-3.5" />
                 </button>
               )}
             </div>
-            <p className="text-[10px] text-white/15 text-center mt-2 font-mono">VEDA — {modes.find(m => m.id === mode)?.label || 'Research'} Mode</p>
+            <p className="text-[10px] text-white/15 text-center mt-2 font-mono tracking-wider">VEDA · {modes.find(m => m.id === mode)?.label || 'Research'}</p>
           </div>
         </div>
 
         {/* Creator Footer */}
-        <footer className="border-t border-white/[0.02] bg-[#0d0d1a] shrink-0">
+        <footer className="border-t border-white/[0.02] bg-[#07070f] shrink-0">
           <div className="mx-auto w-full md:max-w-3xl px-3 md:px-4 py-3 md:py-4">
             <div className="flex flex-col md:flex-row items-center justify-between gap-2 md:gap-4">
               <div className="flex items-center gap-2">
@@ -877,8 +951,8 @@ export default function ChatPage() {
                 </a>
               </div>
             </div>
-            <div className="text-center mt-2 text-[9px] text-white/15 font-mono tracking-wider">
-              © {new Date().getFullYear()} PURVESH NILESH BHADALE · ALL RIGHTS RESERVED
+            <div className="text-center mt-2 text-[9px] text-white/15 font-mono tracking-widest">
+              © {new Date().getFullYear()} PURVESH NILESH BHADALE
             </div>
           </div>
         </footer>
@@ -886,32 +960,29 @@ export default function ChatPage() {
 
       {/* Generate Paper Modal */}
       {showGenerate && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/70 backdrop-blur-sm">
-          <div className="w-full md:max-w-md rounded-t-2xl md:rounded-2xl border border-white/[0.06] bg-[#11111e] shadow-2xl p-4 md:p-5 md:mx-4">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={() => { if (!generating) { setShowGenerate(false); setGenerateTopic(''); } }} />
+          <div className="relative w-full md:max-w-md rounded-t-2xl md:rounded-2xl border border-white/[0.08] bg-[#0d0d1a]/95 glass shadow-2xl p-4 md:p-5 md:mx-4 neon-glow">
             <div className="flex items-center justify-between mb-3 md:mb-4">
               <div className="flex items-center gap-2.5">
-                <FileDown className="h-4 w-4 text-emerald-400" />
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/20">
+                  <FileDown className="h-4 w-4 text-emerald-400" />
+                </div>
                 <h2 className="text-sm font-medium text-white/70">Generate Paper</h2>
               </div>
               <button onClick={() => { if (!generating) { setShowGenerate(false); setGenerateTopic(''); } }} className="text-white/20 hover:text-white/50 transition-colors">
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <p className="text-xs text-white/30 mb-3">Enter a topic and VEDA will write a complete paper with real arXiv references, then download as DOCX.</p>
-            <input
-              value={generateTopic}
-              onChange={(e) => setGenerateTopic(e.target.value)}
+            <p className="text-xs text-white/30 mb-3">Enter a topic to generate a complete research paper with real arXiv references as DOCX.</p>
+            <input value={generateTopic} onChange={(e) => setGenerateTopic(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') generatePaper(); }}
               placeholder="e.g. Quantum machine learning for drug discovery"
               className="w-full h-10 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 text-sm text-white/70 outline-none focus:border-emerald-500/30 transition-colors placeholder:text-white/15 mb-3"
-              disabled={generating}
-              autoFocus
-            />
+              disabled={generating} autoFocus />
             <div className="flex gap-2 justify-end">
               <button onClick={() => { setShowGenerate(false); setGenerateTopic(''); }}
-                className="text-xs px-4 py-2 rounded-lg border border-white/[0.06] text-white/40 hover:text-white/70 transition-colors">
-                Cancel
-              </button>
+                className="text-xs px-4 py-2 rounded-lg border border-white/[0.06] text-white/40 hover:text-white/70 transition-colors">Cancel</button>
               <button onClick={generatePaper} disabled={!generateTopic.trim() || generating}
                 className="flex items-center gap-2 text-xs px-4 py-2 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
                 {generating ? <><span className="h-3 w-3 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" /> Generating...</> : <><FileDown className="h-3 w-3" /> Generate Paper</>}
@@ -921,61 +992,119 @@ export default function ChatPage() {
         </div>
       )}
 
-      {/* Auth Modal */}
+      {/* Find MUN Documents Modal */}
+      {showFindMun && (
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={() => { if (!findLoading) { setShowFindMun(false); setFindResult(''); } }} />
+          <div className="relative w-full md:max-w-2xl rounded-t-2xl md:rounded-2xl border border-white/[0.08] bg-[#0d0d1a]/95 glass shadow-2xl p-4 md:p-5 md:mx-4 max-h-[85vh] flex flex-col neon-glow">
+            <div className="flex items-center justify-between mb-3 md:mb-4 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/20">
+                  <Search className="h-4 w-4 text-emerald-400" />
+                </div>
+                <h2 className="text-sm font-medium text-white/70">Find MUN Documents</h2>
+              </div>
+              <button onClick={() => { if (!findLoading) { setShowFindMun(false); setFindResult(''); } }} className="text-white/20 hover:text-white/50 transition-colors">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="space-y-3 mb-3 shrink-0">
+              <div className="flex gap-2">
+                <select value={findDocType} onChange={(e) => setFindDocType(e.target.value)}
+                  className="flex-1 h-10 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 text-sm text-white/70 outline-none focus:border-emerald-500/30 transition-colors">
+                  <option value="stance">Stance Analysis</option>
+                  <option value="speech">Speeches of Officials</option>
+                  <option value="resolution">Draft Resolutions</option>
+                  <option value="working_paper">Working Papers</option>
+                  <option value="position_paper">Position Papers</option>
+                  <option value="deep_research">Deep Research</option>
+                </select>
+                <input value={findCountry} onChange={(e) => setFindCountry(e.target.value)}
+                  placeholder="Country"
+                  className="flex-1 h-10 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 text-sm text-white/70 outline-none focus:border-emerald-500/30 transition-colors placeholder:text-white/15" />
+              </div>
+              <div className="flex gap-2">
+                <input value={findTopic} onChange={(e) => setFindTopic(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') findMUNDoc(); }}
+                  placeholder="e.g. Arctic sovereignty, AI regulation..."
+                  className="flex-1 h-10 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 text-sm text-white/70 outline-none focus:border-emerald-500/30 transition-colors placeholder:text-white/15"
+                  disabled={findLoading} autoFocus />
+                <button onClick={findMUNDoc} disabled={!findTopic.trim() || findLoading}
+                  className="flex items-center gap-2 text-xs px-4 py-2 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-colors shrink-0">
+                  {findLoading ? <span className="h-3 w-3 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" /> : <><Search className="h-3 w-3" /> Find</>}
+                </button>
+              </div>
+            </div>
+            {findResult && (
+              <div className="flex-1 overflow-y-auto scrollbar-thin border border-white/[0.04] rounded-xl bg-white/[0.02] p-4">
+                <div className="text-xs md:text-sm leading-relaxed text-white/70 whitespace-pre-wrap [&_strong]:text-white/85">
+                  {findResult}
+                </div>
+                <button onClick={() => { navigator.clipboard.writeText(findResult); }}
+                  className="mt-3 flex items-center gap-1.5 text-[10px] text-white/30 hover:text-white/60 px-2 py-1 rounded-lg hover:bg-white/[0.03] transition-colors">
+                  <Copy className="h-3 w-3" /> Copy
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Auth Modal - blocking full screen */}
       {showAuth && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black">
-          <div className="w-full max-w-sm rounded-2xl border border-white/[0.06] bg-[#11111e] shadow-2xl mx-4 p-6">
-            <div className="flex items-center justify-center mb-6">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-cyan-400 shadow-lg">
-                <Sparkles className="h-5 w-5 text-white" />
+          <div className="w-full max-w-sm rounded-2xl border border-white/[0.08] bg-[#0d0d1a] shadow-2xl mx-4 p-6">
+            <div className="flex items-center justify-center mb-5">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-cyan-400 shadow-lg shadow-indigo-500/20">
+                <Sparkles className="h-6 w-6 text-white" />
               </div>
             </div>
             <h2 className="text-lg font-semibold text-center text-white/80 mb-1">
               {authIsLogin ? 'Welcome back' : 'Create account'}
             </h2>
-            <p className="text-xs text-center text-white/30 mb-6">
-              {authIsLogin ? 'Sign in to continue using VEDA' : 'Register to start using VEDA'}
+            <p className="text-xs text-center text-white/30 mb-5">
+              {authIsLogin ? 'Sign in to access your profile' : 'Register with your details'}
             </p>
-            <form onSubmit={handleAuth} className="space-y-4">
+            <form onSubmit={handleAuth} className="space-y-3">
+              {!authIsLogin && (
+                <>
+                  <div>
+                    <label className="text-xs font-medium text-white/40 mb-1.5 block">Full Name</label>
+                    <input name="full_name" type="text" placeholder="Dr. Jane Smith"
+                      className="w-full h-10 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 text-sm text-white/70 outline-none focus:border-indigo-500/30 transition-colors placeholder:text-white/15" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-white/40 mb-1.5 block">Email</label>
+                    <input name="email" type="email" placeholder="jane@university.edu"
+                      className="w-full h-10 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 text-sm text-white/70 outline-none focus:border-indigo-500/30 transition-colors placeholder:text-white/15" />
+                  </div>
+                </>
+              )}
               <div>
                 <label className="text-xs font-medium text-white/40 mb-1.5 block">Username</label>
-                <input
-                  name="username"
-                  type="text"
-                  placeholder="Enter username"
+                <input name="username" type="text" placeholder="Enter username"
                   className="w-full h-10 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 text-sm text-white/70 outline-none focus:border-indigo-500/30 transition-colors placeholder:text-white/15"
-                  autoFocus
-                  autoComplete="username"
-                />
+                  autoFocus autoComplete="username" />
               </div>
               <div>
                 <label className="text-xs font-medium text-white/40 mb-1.5 block">Password</label>
-                <input
-                  name="password"
-                  type="password"
-                  placeholder="Enter password"
+                <input name="password" type="password" placeholder="Enter password"
                   className="w-full h-10 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 text-sm text-white/70 outline-none focus:border-indigo-500/30 transition-colors placeholder:text-white/15"
-                  autoComplete={authIsLogin ? 'current-password' : 'new-password'}
-                />
+                  autoComplete={authIsLogin ? 'current-password' : 'new-password'} />
               </div>
               {authError && (
                 <p className="text-xs text-red-400 bg-red-400/10 rounded-lg px-3 py-2">{authError}</p>
               )}
-              <button
-                type="submit"
-                disabled={authLoading}
-                className="w-full h-10 rounded-xl bg-gradient-to-r from-indigo-500 to-cyan-400 text-white text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
-              >
+              <button type="submit" disabled={authLoading}
+                className="w-full h-10 rounded-xl bg-gradient-to-r from-indigo-500 to-cyan-400 text-white text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20">
                 {authLoading ? (
                   <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : authIsLogin ? 'Sign In' : 'Create Account'}
               </button>
             </form>
             <div className="mt-4 text-center">
-              <button
-                onClick={() => { setAuthIsLogin(!authIsLogin); setAuthError(''); }}
-                className="text-xs text-white/30 hover:text-cyan-400 transition-colors"
-              >
+              <button onClick={() => { setAuthIsLogin(!authIsLogin); setAuthError(''); }}
+                className="text-xs text-white/30 hover:text-cyan-400 transition-colors">
                 {authIsLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
               </button>
             </div>
@@ -985,11 +1114,14 @@ export default function ChatPage() {
 
       {/* Settings Modal */}
       {showSettings && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/70 backdrop-blur-sm">
-          <div className="w-full md:max-w-sm rounded-t-2xl md:rounded-2xl border border-white/[0.06] bg-[#11111e] shadow-2xl md:mx-4">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowSettings(false)} />
+          <div className="relative w-full md:max-w-sm rounded-t-2xl md:rounded-2xl border border-white/[0.08] bg-[#0d0d1a]/95 glass shadow-2xl md:mx-4 neon-glow">
             <div className="flex items-center justify-between px-4 md:px-5 py-3 md:py-4 border-b border-white/[0.04]">
               <div className="flex items-center gap-2.5">
-                <Settings className="h-4 w-4 text-indigo-400" />
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-500/20">
+                  <Settings className="h-4 w-4 text-indigo-400" />
+                </div>
                 <h2 className="text-sm font-medium text-white/70">Settings</h2>
               </div>
               <button onClick={() => setShowSettings(false)} className="text-white/20 hover:text-white/50 transition-colors">
@@ -1002,15 +1134,9 @@ export default function ChatPage() {
                   <label className="text-xs font-medium text-white/50">Temperature</label>
                   <span className="text-xs text-white/30 font-mono">{temperature.toFixed(1)}</span>
                 </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="2"
-                  step="0.1"
-                  value={temperature}
+                <input type="range" min="0" max="2" step="0.1" value={temperature}
                   onChange={(e) => setTemperature(parseFloat(e.target.value))}
-                  className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-white/[0.06] accent-indigo-500"
-                />
+                  className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-white/[0.06] accent-indigo-500" />
                 <div className="flex justify-between text-[10px] text-white/20 mt-1">
                   <span>Precise</span>
                   <span>Creative</span>
@@ -1019,9 +1145,7 @@ export default function ChatPage() {
             </div>
             <div className="flex justify-end px-4 md:px-5 py-3 border-t border-white/[0.04]">
               <button onClick={() => setShowSettings(false)}
-                className="text-xs px-4 py-1.5 rounded-lg border border-white/[0.06] text-white/40 hover:text-white/70 transition-colors">
-                Close
-              </button>
+                className="text-xs px-4 py-1.5 rounded-lg border border-white/[0.06] text-white/40 hover:text-white/70 transition-colors">Close</button>
             </div>
           </div>
         </div>

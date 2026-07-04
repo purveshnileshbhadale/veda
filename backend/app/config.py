@@ -41,6 +41,11 @@ class Settings(BaseSettings):
     
     CORS_ORIGINS: str = '["http://localhost:3000","http://127.0.0.1:3000","https://frontend-delta-weld-86.vercel.app"]'
 
+    ADMIN_BOOTSTRAP_USERNAME: Optional[str] = None
+    ADMIN_BOOTSTRAP_PASSWORD: Optional[str] = None
+    ADMIN_BOOTSTRAP_EMAIL: Optional[str] = None
+    DEVELOPER_BOOTSTRAP_USERNAME: Optional[str] = None
+
     class Config:
         env_file = ".env"
         case_sensitive = True

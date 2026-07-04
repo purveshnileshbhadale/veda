@@ -7,6 +7,7 @@ class UserRole(str, enum.Enum):
     RESEARCHER = "researcher"
     STUDENT = "student"
     PROFESSOR = "professor"
+    DEVELOPER = "developer"
     ADMIN = "admin"
 
 class User(Base, TimestampMixin):
