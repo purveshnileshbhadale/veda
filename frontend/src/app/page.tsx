@@ -375,7 +375,7 @@ export default function ChatPage() {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token()}` },
         body: JSON.stringify({ messages: currentMsgs, mode, api_key: gk }), signal: controller.signal,
       });
-      if (!res.ok) throw new Error('Stream failed');
+      if (!res.ok) { const errText = await res.text().catch(() => ''); throw new Error(errText || 'Stream failed'); }
       const reader = res.body?.getReader();
       if (!reader) throw new Error('No reader');
       const decoder = new TextDecoder();
@@ -402,11 +402,12 @@ export default function ChatPage() {
       setConversations(prev => { const c = prev.find(x => x.id === convId); if (c) syncConversation(c); return prev; });
     } catch (err: any) {
       if (err.name !== 'AbortError') {
+        const errMsg = err.message?.includes('Stream failed') ? 'Server error. Try again.' : err.message || 'Error';
         setConversations(prev => prev.map(c => {
           if (c.id !== convId) return c;
           const msgs = [...c.messages];
           const last = msgs[msgs.length - 1];
-          if (last?.role === 'assistant' && !last.content) msgs[msgs.length - 1] = { ...last, content: 'Error. Check your API key in settings.' };
+          if (last?.role === 'assistant' && !last.content) msgs[msgs.length - 1] = { ...last, content: errMsg };
           return { ...c, messages: msgs };
         }));
       }
@@ -617,6 +618,10 @@ export default function ChatPage() {
             )}
           </div>
           <div className="flex items-center gap-1">
+            <button onClick={() => setShowSettings(true)}
+              className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-white/60 px-2 py-1 rounded-lg hover:bg-white/[0.03] transition-colors">
+              <Settings className="h-3 w-3" />
+            </button>
             <button onClick={() => setShowGenerate(true)}
               className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-emerald-400 px-2 py-1 rounded-lg hover:bg-white/[0.03] transition-colors">
               <FileDown className="h-3 w-3" />
