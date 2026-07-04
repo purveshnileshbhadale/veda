@@ -57,7 +57,7 @@ async def register(data: UserCreate, db: AsyncSession = Depends(get_db)):
 async def login(data: UserLogin, db: AsyncSession = Depends(get_db)):
     service = AuthService(db)
     try:
-        return await service.login(data.email, data.password)
+        return await service.login(data.username, data.password)
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
 

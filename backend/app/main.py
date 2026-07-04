@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
 from app.db.session import init_db
-from app.api import auth, ai_assistant
+from app.api import auth, ai_assistant, conversations
 import os, json
 
 settings = get_settings()
@@ -25,6 +25,7 @@ os.makedirs("./data/uploads", exist_ok=True)
 
 app.include_router(auth.router, prefix=settings.API_PREFIX)
 app.include_router(ai_assistant.router, prefix=settings.API_PREFIX)
+app.include_router(conversations.router, prefix=settings.API_PREFIX)
 
 @app.on_event("startup")
 async def startup():

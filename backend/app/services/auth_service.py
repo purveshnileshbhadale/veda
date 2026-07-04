@@ -56,12 +56,12 @@ class AuthService:
             }
         }
 
-    async def login(self, email: str, password: str) -> dict:
-        result = await self.db.execute(select(User).where(User.email == email))
+    async def login(self, username: str, password: str) -> dict:
+        result = await self.db.execute(select(User).where((User.username == username) | (User.email == username)))
         user = result.scalar_one_or_none()
         
         if not user or not verify_password(password, user.hashed_password):
-            raise ValueError("Invalid email or password")
+            raise ValueError("Invalid username or password")
         
         if not user.is_active:
             raise ValueError("Account is deactivated")

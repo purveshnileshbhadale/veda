@@ -12,7 +12,7 @@ class UserCreate(BaseModel):
     department: Optional[str] = None
 
 class UserLogin(BaseModel):
-    email: str
+    username: str
     password: str = Field(..., max_length=72)
 
 class UserResponse(BaseModel):

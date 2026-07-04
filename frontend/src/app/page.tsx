@@ -249,19 +249,35 @@ export default function ChatPage() {
 
   const token = () => localStorage.getItem('access_token');
 
+  const loadConversations = async () => {
+    const t = token();
+    if (!t) return;
+    try {
+      const r = await fetch(`${API}/conversations`, { headers: { 'Authorization': `Bearer ${t}` } });
+      if (r.ok) { const d = await r.json(); setConversations(d); }
+    } catch {}
+  };
+
+  const syncConversation = async (conv: { id: string; title: string; messages: Message[] }) => {
+    const t = token();
+    if (!t) return;
+    try {
+      await fetch(`${API}/conversations/${conv.id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` },
+        body: JSON.stringify({ title: conv.title, messages: conv.messages }),
+      });
+    } catch {}
+  };
+
   const autoLogin = async () => {
     const t = token();
     if (t) {
       try {
         const r = await fetch(`${API}/auth/me`, { headers: { 'Authorization': `Bearer ${t}` } });
-        if (r.ok) { const d = await r.json(); setUser(d); setShowAuth(false); return; }
+        if (r.ok) { const d = await r.json(); setUser(d); setShowAuth(false); loadConversations(); return; }
       } catch {}
       localStorage.removeItem('access_token');
     }
-    try {
-      const r = await fetch(`${API}/auth/auto-login`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-      if (r.ok) { const d = await r.json(); localStorage.setItem('access_token', d.access_token); setUser(d.user); setShowAuth(false); }
-    } catch {}
   };
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -283,6 +299,7 @@ export default function ChatPage() {
         localStorage.setItem('access_token', d.access_token);
         setUser(d.user);
         setShowAuth(false);
+        loadConversations();
       } else {
         if (d.detail) {
           if (Array.isArray(d.detail)) setAuthError(d.detail.map((e: any) => e.msg).join('; '));
@@ -294,25 +311,34 @@ export default function ChatPage() {
   };
 
   const ensureToken = async () => {
-    let t = token();
-    if (t) return t;
+    return token() || null;
+  };
+
+  const syncNewConversation = async (conv: { id: string; title: string; messages: Message[] }) => {
+    const t = token();
+    if (!t) return;
     try {
-      const r = await fetch(`${API}/auth/auto-login`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-      if (r.ok) { const d = await r.json(); localStorage.setItem('access_token', d.access_token); return d.access_token; }
+      await fetch(`${API}/conversations`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` },
+        body: JSON.stringify(conv),
+      });
     } catch {}
-    return null;
   };
 
   const newChat = () => {
     const id = Date.now().toString();
-    setConversations(prev => [...prev, { id, title: 'New chat', messages: [] }]);
+    const conv = { id, title: 'New chat', messages: [] };
+    setConversations(prev => [...prev, conv]);
     setActiveId(id);
     setInput('');
+    syncNewConversation(conv);
   };
 
   const deleteChat = (id: string) => {
     setConversations(prev => prev.filter(c => c.id !== id));
     if (activeId === id) setActiveId('');
+    const t = token();
+    if (t) fetch(`${API}/conversations/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${t}` } }).catch(() => {});
   };
 
   const handleSend = useCallback(async () => {
@@ -322,10 +348,15 @@ export default function ChatPage() {
     let convId = activeId;
     if (!convId) {
       convId = Date.now().toString();
-      setConversations(prev => [...prev, { id: convId, title: text.slice(0, 40), messages: [] }]);
+      const newConv = { id: convId, title: text.slice(0, 40), messages: [] };
+      setConversations(prev => [...prev, newConv]);
       setActiveId(convId);
+      syncNewConversation(newConv);
     } else {
-      setConversations(prev => prev.map(c => c.id === convId && c.title === 'New chat' ? { ...c, title: text.slice(0, 40) } : c));
+      setConversations(prev => prev.map(c => {
+        if (c.id === convId && c.title === 'New chat') { const u = { ...c, title: text.slice(0, 40) }; syncConversation(u); return u; }
+        return c;
+      }));
     }
 
     const userMsg: Message = { role: 'user', content: text };
@@ -368,6 +399,7 @@ export default function ChatPage() {
         }
         buf = '';
       }
+      setConversations(prev => { const c = prev.find(x => x.id === convId); if (c) syncConversation(c); return prev; });
     } catch (err: any) {
       if (err.name !== 'AbortError') {
         setConversations(prev => prev.map(c => {
@@ -378,8 +410,9 @@ export default function ChatPage() {
           return { ...c, messages: msgs };
         }));
       }
+      setConversations(prev => { const c = prev.find(x => x.id === convId); if (c) syncConversation(c); return prev; });
     } finally { setStreaming(false); abortRef.current = null; }
-  }, [input, streaming, activeId, conversations]);
+  }, [input, streaming, activeId, conversations, user]);
 
   const exportDocx = async () => {
     const t = await ensureToken();
