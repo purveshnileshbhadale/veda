@@ -51,14 +51,14 @@ async def register(data: UserCreate, db: AsyncSession = Depends(get_db)):
     service = AuthService(db)
     try:
         result = await service.register(data)
-        from app.config import get_settings
-        s = get_settings()
-        if s.DEVELOPER_BOOTSTRAP_USERNAME and data.username == s.DEVELOPER_BOOTSTRAP_USERNAME:
-            from sqlalchemy import select
+        from sqlalchemy import select, func
+        count = await db.execute(select(func.count(User.id)))
+        total = count.scalar()
+        if total == 1:
             r = await db.execute(select(User).where(User.username == data.username))
             u = r.scalar_one_or_none()
             if u:
-                u.role = UserRole.DEVELOPER
+                u.role = UserRole.ADMIN
                 await db.commit()
                 await db.refresh(u)
                 from app.schemas.user import UserResponse

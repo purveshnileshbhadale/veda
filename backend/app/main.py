@@ -52,13 +52,6 @@ async def startup():
                 db.add(admin)
                 db.commit()
                 print(f"Bootstrapped admin user: {settings.ADMIN_BOOTSTRAP_USERNAME}")
-
-        if settings.DEVELOPER_BOOTSTRAP_USERNAME:
-            user = db.query(User).filter(User.username == settings.DEVELOPER_BOOTSTRAP_USERNAME).first()
-            if user and user.role != UserRole.DEVELOPER:
-                user.role = UserRole.DEVELOPER
-                db.commit()
-                print(f"Promoted existing user '{user.username}' to developer")
     finally:
         db.close()
 

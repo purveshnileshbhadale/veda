@@ -44,7 +44,6 @@ class Settings(BaseSettings):
     ADMIN_BOOTSTRAP_USERNAME: Optional[str] = None
     ADMIN_BOOTSTRAP_PASSWORD: Optional[str] = None
     ADMIN_BOOTSTRAP_EMAIL: Optional[str] = None
-    DEVELOPER_BOOTSTRAP_USERNAME: Optional[str] = None
 
     class Config:
         env_file = ".env"
