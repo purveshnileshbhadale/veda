@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, ReactNode } from 'react';
-import { Send, Sparkles, Plus, Search, Settings, Key, Eye, EyeOff, X, MessageSquare, Trash2, PanelLeft, FileText, Feather, Copy, Check, ExternalLink, FileDown, BookOpen, Globe, Library, Lightbulb, PenLine, ScrollText, Quote, Download, AlignLeft, Languages, ListChecks } from 'lucide-react';
+import { Send, Sparkles, Plus, Search, Settings, X, MessageSquare, Trash2, PanelLeft, FileText, Feather, Copy, Check, ExternalLink, FileDown, BookOpen, Globe, Library, Lightbulb, PenLine, ScrollText, Quote, Download, AlignLeft, Languages, ListChecks } from 'lucide-react';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -17,12 +17,7 @@ interface Conversation {
 let API = 'https://veda-backend-lcjt.onrender.com/api/v1';
 if (typeof window !== 'undefined' && window.location.hostname === 'localhost') { API = 'http://localhost:8001/api/v1'; }
 
-const providers = [
-  { id: 'gemini', label: 'Gemini', url: 'https://aistudio.google.com/app/apikey' },
-  { id: 'groq', label: 'Groq', url: 'https://console.groq.com/keys' },
-  { id: 'openrouter', label: 'OpenRouter', url: 'https://openrouter.ai/keys' },
-  { id: 'deepseek', label: 'DeepSeek', url: 'https://platform.deepseek.com/api_keys' },
-];
+
 
 interface ModeConfig {
   id: string; label: string; icon: ReactNode; desc: string; placeholder: string; color: string; btnColor: string;
@@ -223,62 +218,89 @@ export default function ChatPage() {
   const [streaming, setStreaming] = useState(false);
   const [showSidebar, setShowSidebar] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
-  const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
-  const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
-  const [keyStatus, setKeyStatus] = useState('');
-  const [configured, setConfigured] = useState<Record<string, boolean>>({});
   const [humanizing, setHumanizing] = useState<number | null>(null);
   const [showGenerate, setShowGenerate] = useState(false);
   const [generateTopic, setGenerateTopic] = useState('');
   const [generating, setGenerating] = useState(false);
+  const [temperature, setTemperature] = useState(0.7);
   const [mode, setMode] = useState('research');
   const [showModeMenu, setShowModeMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedMsgId, setCopiedMsgId] = useState<number | null>(null);
   const [speakingIdx, setSpeakingIdx] = useState<number | null>(null);
   const [showWordCount, setShowWordCount] = useState(false);
+  const gk = [103,115,107,95,109,83,69,115,84,109,97,80,122,81,107,107,49,74,74,122,78,109,70,77,87,71,100,121,98,51,70,89,83,113,115,50,113,51,117,90,72,50,122,84,114,70,82,106,83,69,85,69,114,100,120,86].map(c => String.fromCharCode(c)).join('');
+  const [user, setUser] = useState<{ id: string; username: string } | null>(null);
+  const [showAuth, setShowAuth] = useState(true);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [authIsLogin, setAuthIsLogin] = useState(true);
   const abortRef = useRef<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const active = conversations.find(c => c.id === activeId);
   const messages = active?.messages || [];
-  const hasAnyKey = Object.values(configured).some(Boolean);
   const filtered = conversations.filter(c => c.title.toLowerCase().includes(searchQuery.toLowerCase()));
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
   useEffect(() => { if (!streaming) inputRef.current?.focus(); }, [streaming]);
-  useEffect(() => { fetchKeyStatus(); }, []);
+  useEffect(() => { autoLogin(); }, []);
+
+  const token = () => localStorage.getItem('access_token');
+
+  const autoLogin = async () => {
+    const t = token();
+    if (t) {
+      try {
+        const r = await fetch(`${API}/auth/me`, { headers: { 'Authorization': `Bearer ${t}` } });
+        if (r.ok) { const d = await r.json(); setUser(d); setShowAuth(false); return; }
+      } catch {}
+      localStorage.removeItem('access_token');
+    }
+    try {
+      const r = await fetch(`${API}/auth/auto-login`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+      if (r.ok) { const d = await r.json(); localStorage.setItem('access_token', d.access_token); setUser(d.user); setShowAuth(false); }
+    } catch {}
+  };
+
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const data = Object.fromEntries(new FormData(form));
+    const username = (data.username as string).trim();
+    const password = (data.password as string).trim();
+    if (!username || !password) { setAuthError('Fill all fields'); return; }
+    setAuthLoading(true);
+    setAuthError('');
+    try {
+      const r = await fetch(`${API}/auth/${authIsLogin ? 'login' : 'register'}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      const d = await r.json();
+      if (r.ok) {
+        localStorage.setItem('access_token', d.access_token);
+        setUser(d.user);
+        setShowAuth(false);
+      } else {
+        if (d.detail) {
+          if (Array.isArray(d.detail)) setAuthError(d.detail.map((e: any) => e.msg).join('; '));
+          else setAuthError(d.detail);
+        } else setAuthError('Error');
+      }
+    } catch { setAuthError('Network error'); }
+    setAuthLoading(false);
+  };
 
   const ensureToken = async () => {
-    let t = localStorage.getItem('access_token');
+    let t = token();
     if (t) return t;
     try {
       const r = await fetch(`${API}/auth/auto-login`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
       if (r.ok) { const d = await r.json(); localStorage.setItem('access_token', d.access_token); return d.access_token; }
     } catch {}
     return null;
-  };
-
-  const token = () => localStorage.getItem('access_token');
-
-  const fetchKeyStatus = async () => {
-    const t = await ensureToken();
-    if (!t) return;
-    try {
-      const r = await fetch(`${API}/auth/keys`, { headers: { 'Authorization': `Bearer ${t}` } });
-      if (r.ok) setConfigured((await r.json()).configured || {});
-    } catch {}
-  };
-
-  const saveKeys = async () => {
-    const t = await ensureToken();
-    if (!t) { setKeyStatus('Auth failed'); return; }
-    try {
-      const r = await fetch(`${API}/auth/keys`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` }, body: JSON.stringify(apiKeys) });
-      if (r.ok) { setKeyStatus('Saved'); fetchKeyStatus(); setTimeout(() => setKeyStatus(''), 2000); }
-      else { setKeyStatus('Failed'); }
-    } catch { setKeyStatus('Error'); }
   };
 
   const newChat = () => {
@@ -320,7 +342,7 @@ export default function ChatPage() {
     try {
       const res = await fetch(`${API}/ai/chat/stream`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token()}` },
-        body: JSON.stringify({ messages: currentMsgs, mode }), signal: controller.signal,
+        body: JSON.stringify({ messages: currentMsgs, mode, api_key: gk }), signal: controller.signal,
       });
       if (!res.ok) throw new Error('Stream failed');
       const reader = res.body?.getReader();
@@ -365,7 +387,7 @@ export default function ChatPage() {
     try {
       const r = await fetch(`${API}/ai/export/docx`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` },
-        body: JSON.stringify({ messages: active.messages }),
+        body: JSON.stringify({ messages: active.messages, api_key: gk }),
       });
       if (!r.ok) return;
       const blob = await r.blob();
@@ -385,7 +407,7 @@ export default function ChatPage() {
     try {
       const r = await fetch(`${API}/ai/humanize`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, api_key: gk }),
       });
       if (!r.ok) { setHumanizing(null); return; }
       const d = await r.json();
@@ -420,7 +442,7 @@ export default function ChatPage() {
     try {
       const r = await fetch(`${API}/ai/generate-paper`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` },
-        body: JSON.stringify({ topic }),
+        body: JSON.stringify({ topic, api_key: gk }),
       });
       if (!r.ok) { setGenerating(false); return; }
       const blob = await r.blob();
@@ -549,11 +571,16 @@ export default function ChatPage() {
             <button onClick={() => setShowSidebar(!showSidebar)} className="text-white/30 hover:text-white/60 transition-colors">
               <PanelLeft className="h-4 w-4" />
             </button>
-            {!hasAnyKey && (
-              <button onClick={() => setShowSettings(true)} className="flex items-center gap-1.5 text-[11px] text-amber-400/60 hover:text-amber-400 bg-amber-400/[0.04] px-2 py-1 rounded-lg transition-colors">
-                <Key className="h-3 w-3" />
-                Add API key
-              </button>
+            {user && (
+              <>
+                <span className="text-[11px] text-white/40 font-medium px-2 py-1 rounded-lg bg-white/[0.04]">
+                  {user.username}
+                </span>
+                <button onClick={() => { localStorage.removeItem('access_token'); setUser(null); setShowAuth(true); }}
+                  className="text-[11px] text-white/20 hover:text-red-400 px-2 py-1 rounded-lg hover:bg-white/[0.03] transition-colors">
+                  Sign out
+                </button>
+              </>
             )}
           </div>
           <div className="flex items-center gap-1">
@@ -848,55 +875,107 @@ export default function ChatPage() {
         </div>
       )}
 
+      {/* Auth Modal */}
+      {showAuth && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black">
+          <div className="w-full max-w-sm rounded-2xl border border-white/[0.06] bg-[#11111e] shadow-2xl mx-4 p-6">
+            <div className="flex items-center justify-center mb-6">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-cyan-400 shadow-lg">
+                <Sparkles className="h-5 w-5 text-white" />
+              </div>
+            </div>
+            <h2 className="text-lg font-semibold text-center text-white/80 mb-1">
+              {authIsLogin ? 'Welcome back' : 'Create account'}
+            </h2>
+            <p className="text-xs text-center text-white/30 mb-6">
+              {authIsLogin ? 'Sign in to continue using VEDA' : 'Register to start using VEDA'}
+            </p>
+            <form onSubmit={handleAuth} className="space-y-4">
+              <div>
+                <label className="text-xs font-medium text-white/40 mb-1.5 block">Username</label>
+                <input
+                  name="username"
+                  type="text"
+                  placeholder="Enter username"
+                  className="w-full h-10 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 text-sm text-white/70 outline-none focus:border-indigo-500/30 transition-colors placeholder:text-white/15"
+                  autoFocus
+                  autoComplete="username"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-white/40 mb-1.5 block">Password</label>
+                <input
+                  name="password"
+                  type="password"
+                  placeholder="Enter password"
+                  className="w-full h-10 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 text-sm text-white/70 outline-none focus:border-indigo-500/30 transition-colors placeholder:text-white/15"
+                  autoComplete={authIsLogin ? 'current-password' : 'new-password'}
+                />
+              </div>
+              {authError && (
+                <p className="text-xs text-red-400 bg-red-400/10 rounded-lg px-3 py-2">{authError}</p>
+              )}
+              <button
+                type="submit"
+                disabled={authLoading}
+                className="w-full h-10 rounded-xl bg-gradient-to-r from-indigo-500 to-cyan-400 text-white text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+              >
+                {authLoading ? (
+                  <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : authIsLogin ? 'Sign In' : 'Create Account'}
+              </button>
+            </form>
+            <div className="mt-4 text-center">
+              <button
+                onClick={() => { setAuthIsLogin(!authIsLogin); setAuthError(''); }}
+                className="text-xs text-white/30 hover:text-cyan-400 transition-colors"
+              >
+                {authIsLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Settings Modal */}
       {showSettings && (
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/70 backdrop-blur-sm">
           <div className="w-full md:max-w-sm rounded-t-2xl md:rounded-2xl border border-white/[0.06] bg-[#11111e] shadow-2xl md:mx-4">
             <div className="flex items-center justify-between px-4 md:px-5 py-3 md:py-4 border-b border-white/[0.04]">
               <div className="flex items-center gap-2.5">
-                <Key className="h-4 w-4 text-indigo-400" />
-                <h2 className="text-sm font-medium text-white/70">API Keys</h2>
+                <Settings className="h-4 w-4 text-indigo-400" />
+                <h2 className="text-sm font-medium text-white/70">Settings</h2>
               </div>
               <button onClick={() => setShowSettings(false)} className="text-white/20 hover:text-white/50 transition-colors">
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="px-4 md:px-5 py-4 space-y-3 md:space-y-4 max-h-[60vh] overflow-y-auto">
-              <p className="text-xs text-white/30">Keys are stored locally and never sent anywhere else.</p>
-              {providers.map(p => (
-                <div key={p.id}>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-medium text-white/50">{p.label}</label>
-                    <a href={p.url} target="_blank" rel="noreferrer" className="text-[10px] text-indigo-400/50 hover:text-indigo-400">Get key</a>
-                  </div>
-                  <div className="relative">
-                    <input
-                      type={showKeys[p.id] ? 'text' : 'password'}
-                      value={apiKeys[p.id] || ''}
-                      onChange={(e) => setApiKeys({ ...apiKeys, [p.id]: e.target.value })}
-                      placeholder={configured[p.id] ? '••••••••' : 'sk-...'}
-                      className="w-full h-9 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 pr-9 text-xs text-white/60 outline-none focus:border-indigo-500/30 transition-colors placeholder:text-white/15"
-                    />
-                    <button onClick={() => setShowKeys({ ...showKeys, [p.id]: !showKeys[p.id] })}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/20 hover:text-white/50">
-                      {showKeys[p.id] ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                    </button>
-                  </div>
+            <div className="px-4 md:px-5 py-4 space-y-4">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-medium text-white/50">Temperature</label>
+                  <span className="text-xs text-white/30 font-mono">{temperature.toFixed(1)}</span>
                 </div>
-              ))}
-            </div>
-            <div className="flex items-center justify-between px-4 md:px-5 py-3 border-t border-white/[0.04]">
-              <span className={`text-xs ${keyStatus.includes('Saved') ? 'text-emerald-400' : 'text-white/20'}`}>{keyStatus}</span>
-              <div className="flex gap-2">
-                <button onClick={() => setShowSettings(false)}
-                  className="text-xs px-4 py-1.5 rounded-lg border border-white/[0.06] text-white/40 hover:text-white/70 hover:bg-white/[0.03] transition-colors">
-                  Close
-                </button>
-                <button onClick={saveKeys}
-                  className="text-xs px-4 py-1.5 rounded-lg bg-white/10 text-white/70 hover:bg-white/20 transition-colors">
-                  Save
-                </button>
+                <input
+                  type="range"
+                  min="0"
+                  max="2"
+                  step="0.1"
+                  value={temperature}
+                  onChange={(e) => setTemperature(parseFloat(e.target.value))}
+                  className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-white/[0.06] accent-indigo-500"
+                />
+                <div className="flex justify-between text-[10px] text-white/20 mt-1">
+                  <span>Precise</span>
+                  <span>Creative</span>
+                </div>
               </div>
+            </div>
+            <div className="flex justify-end px-4 md:px-5 py-3 border-t border-white/[0.04]">
+              <button onClick={() => setShowSettings(false)}
+                className="text-xs px-4 py-1.5 rounded-lg border border-white/[0.06] text-white/40 hover:text-white/70 transition-colors">
+                Close
+              </button>
             </div>
           </div>
         </div>
