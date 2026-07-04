@@ -245,12 +245,12 @@ async def humanize(body: HumanizeRequest, current_user: User = Depends(get_curre
  
  Text to humanize:
  {body.text}"""
-     result = await client.chat([{"role": "system", "content": "You are an expert at making AI-generated academic text sound natural and human-like."}, {"role": "user", "content": prompt}])
-     return {"result": result}
- 
- class GeneratePaperRequest(BaseModel):
-     topic: str
-     api_key: Optional[str] = None
+    result = await client.chat([{"role": "system", "content": "You are an expert at making AI-generated academic text sound natural and human-like."}, {"role": "user", "content": prompt}])
+    return {"result": result}
+
+class GeneratePaperRequest(BaseModel):
+    topic: str
+    api_key: Optional[str] = None
 
 @router.post("/generate-paper")
 async def generate_paper(body: GeneratePaperRequest, current_user: User = Depends(get_current_user)):
