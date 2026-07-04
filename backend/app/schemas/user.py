@@ -4,10 +4,10 @@ from datetime import datetime
 import uuid
 
 class UserCreate(BaseModel):
-    email: str
+    email: Optional[str] = None
     username: str
-    password: str = Field(..., min_length=8, max_length=72, description="Password (8-72 characters)")
-    full_name: str
+    password: str = Field(..., max_length=72)
+    full_name: Optional[str] = None
     institution: Optional[str] = None
     department: Optional[str] = None
 
@@ -48,4 +48,4 @@ class UserProfileUpdate(BaseModel):
 
 class PasswordChange(BaseModel):
     current_password: str
-    new_password: str = Field(..., min_length=8)
+    new_password: str

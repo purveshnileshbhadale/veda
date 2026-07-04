@@ -19,10 +19,10 @@ class AuthService:
         
         user = User(
             id=str(uuid.uuid4()),
-            email=data.email,
+            email=data.email or f"{data.username}@veda.app",
             username=data.username,
             hashed_password=hash_password(data.password),
-            full_name=data.full_name,
+            full_name=data.full_name or data.username,
             institution=data.institution,
             department=data.department,
         )
