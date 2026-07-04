@@ -229,7 +229,7 @@ export default function ChatPage() {
   const [copiedMsgId, setCopiedMsgId] = useState<number | null>(null);
   const [speakingIdx, setSpeakingIdx] = useState<number | null>(null);
   const [showWordCount, setShowWordCount] = useState(false);
-  const gk = [103,115,107,95,109,83,69,115,84,109,97,80,122,81,107,107,49,74,74,122,78,109,70,77,87,71,100,121,98,51,70,89,83,113,115,50,113,51,117,90,72,50,122,84,114,70,82,106,83,69,85,69,114,100,120,86].map(c => String.fromCharCode(c)).join('');
+  const gk = [103,115,107,95,70,67,83,88,50,49,82,106,69,90,110,108,120,108,88,117,52,84,111,85,87,71,100,121,98,51,70,89,100,54,98,111,88,84,55,72,70,74,88,108,121,108,71,102,74,102,53,113,102,84,109,99].map(c => String.fromCharCode(c)).join('');
   const [user, setUser] = useState<{ id: string; username: string } | null>(null);
   const [showAuth, setShowAuth] = useState(true);
   const [authLoading, setAuthLoading] = useState(false);
