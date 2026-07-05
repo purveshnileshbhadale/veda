@@ -604,12 +604,13 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex h-screen bg-[#07070f] bg-grid">
+    <div className="flex h-screen bg-[#07070f] bg-grid bg-stars">
       {/* Floating background orbs */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl animate-float" />
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-cyan-500/5 rounded-full blur-3xl animate-float" style={{ animationDelay: '-4s' }} />
         <div className="absolute top-1/3 left-1/4 w-64 h-64 bg-emerald-500/3 rounded-full blur-3xl animate-float" style={{ animationDelay: '-2s' }} />
+        <div className="absolute top-1/2 right-1/3 w-48 h-48 bg-rose-500/3 rounded-full blur-3xl animate-float" style={{ animationDelay: '-6s' }} />
       </div>
 
       {/* Toasts */}
@@ -627,7 +628,7 @@ export default function ChatPage() {
       <aside className={`hidden md:flex flex-col ${showSidebar ? 'w-64' : 'w-0 overflow-hidden'} border-r border-white/[0.03] glass-light bg-[#0a0a14]/60 shrink-0 transition-all duration-300 relative z-10 animate-slideInLeft`}>
         <div className="p-3">
           <button onClick={newChat}
-            className="flex w-full items-center gap-2 rounded-xl border border-white/[0.06] px-3 py-2.5 text-sm text-white/60 hover:text-white hover:border-white/[0.12] hover:bg-white/[0.03] transition-all">
+            className="flex w-full items-center gap-2 rounded-xl border border-white/[0.06] px-3 py-2.5 text-sm text-white/60 hover:text-white hover:border-white/[0.12] hover:bg-white/[0.03] hover-lift transition-all">
             <Plus className="h-4 w-4" />
             New chat
           </button>
@@ -660,24 +661,24 @@ export default function ChatPage() {
         </div>
         <div className="p-3 border-t border-white/[0.03] space-y-0.5">
           <button onClick={() => router.push('/profile')}
-            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.03] transition-colors">
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.03] hover-lift transition-all">
             <User className="h-3.5 w-3.5" />
             Profile
           </button>
           <button onClick={() => router.push('/developer')}
-            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.03] transition-colors">
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.03] hover-lift transition-all">
             <Terminal className="h-3.5 w-3.5" />
             Developer
           </button>
           {user?.role === 'admin' && (
             <button onClick={() => router.push('/admin')}
-              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.03] transition-colors">
+              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.03] hover-lift transition-all">
               <Shield className="h-3.5 w-3.5" />
               Admin
             </button>
           )}
           <button onClick={() => setShowSettings(true)}
-            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.03] transition-colors">
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.03] hover-lift transition-all">
             <Settings className="h-3.5 w-3.5" />
             Settings
           </button>
@@ -724,24 +725,24 @@ export default function ChatPage() {
             </div>
             <div className="p-3 border-t border-white/[0.03] space-y-0.5">
               <button onClick={() => { router.push('/profile'); setShowSidebar(false); }}
-                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.03] transition-colors">
+                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.03] hover-lift transition-all">
                 <User className="h-3.5 w-3.5" />
                 Profile
               </button>
               <button onClick={() => { router.push('/developer'); setShowSidebar(false); }}
-                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.03] transition-colors">
+                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.03] hover-lift transition-all">
                 <Terminal className="h-3.5 w-3.5" />
                 Developer
               </button>
               {user?.role === 'admin' && (
                 <button onClick={() => { router.push('/admin'); setShowSidebar(false); }}
-                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.03] transition-colors">
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.03] hover-lift transition-all">
                   <Shield className="h-3.5 w-3.5" />
                   Admin
                 </button>
               )}
               <button onClick={() => { setShowSettings(true); setShowSidebar(false); }}
-                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.03] transition-colors">
+                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.03] hover-lift transition-all">
                 <Settings className="h-3.5 w-3.5" />
                 Settings
               </button>
@@ -753,12 +754,12 @@ export default function ChatPage() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="flex items-center justify-between px-4 h-11 border-b border-white/[0.03] shrink-0 bg-[#07070f]/80 glass-light relative z-10">
+        <header className="flex items-center justify-between px-4 h-11 border-b border-white/[0.03] shrink-0 bg-[#07070f]/80 glass-light relative z-10 section-glow">
           <div className="flex items-center gap-2 min-w-0">
-            <button onClick={() => setShowSidebar(!showSidebar)} className="text-white/30 hover:text-white/60 transition-colors shrink-0">
+            <button onClick={() => setShowSidebar(!showSidebar)} className="text-white/30 hover:text-white/60 transition-colors shrink-0 hover-lift">
               <PanelLeft className="h-4 w-4" />
             </button>
-            <span className="text-[11px] font-mono font-bold bg-gradient-to-r from-indigo-300 via-cyan-300 to-emerald-300 bg-clip-text text-transparent">VEDA</span>
+            <span className="text-[11px] font-mono font-bold bg-gradient-to-r from-indigo-300 via-cyan-300 to-emerald-300 bg-clip-text text-transparent neon-text">VEDA</span>
             {active && (
               <span className="text-[11px] text-white/30 truncate ml-1 hidden sm:inline font-mono">/ {active.title}</span>
             )}
@@ -766,36 +767,36 @@ export default function ChatPage() {
           <div className="flex items-center gap-1">
             {user && (
               <button onClick={() => router.push('/profile')}
-                className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-white/60 px-2 py-1 rounded-lg hover:bg-white/[0.03] transition-colors">
+                className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-white/60 px-2 py-1 rounded-lg hover:bg-white/[0.03] hover-lift transition-all">
                 <User className="h-3 w-3" />
                 <span className="hidden sm:inline text-[10px] text-emerald-400/70">{user.username}</span>
               </button>
             )}
             <button onClick={() => setShowSettings(true)}
-              className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-white/60 px-2 py-1 rounded-lg hover:bg-white/[0.03] transition-colors">
+              className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-white/60 px-2 py-1 rounded-lg hover:bg-white/[0.03] hover-lift transition-all">
               <Settings className="h-3 w-3" />
             </button>
             {mode === 'mun' && (
               <button onClick={() => setShowFindMun(true)}
-                className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-emerald-400 px-2 py-1 rounded-lg hover:bg-white/[0.03] transition-colors">
+                className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-emerald-400 px-2 py-1 rounded-lg hover:bg-white/[0.03] hover-lift transition-all">
                 <Search className="h-3 w-3" />
                 <span className="hidden sm:inline">Find</span>
               </button>
             )}
             <button onClick={() => setShowGenerate(true)}
-              className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-emerald-400 px-2 py-1 rounded-lg hover:bg-white/[0.03] transition-colors">
+              className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-emerald-400 px-2 py-1 rounded-lg hover:bg-white/[0.03] hover-lift transition-all">
               <FileDown className="h-3 w-3" />
               <span className="hidden sm:inline">Paper</span>
             </button>
             {active && active.messages.length > 0 && (
               <>
                 <button onClick={exportDocx}
-                  className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-white/60 px-2 py-1 rounded-lg hover:bg-white/[0.03] transition-colors">
+                  className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-white/60 px-2 py-1 rounded-lg hover:bg-white/[0.03] hover-lift transition-all">
                   <FileText className="h-3 w-3" />
                   <span className="hidden sm:inline">DOCX</span>
                 </button>
                 <button onClick={exportTxt}
-                  className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-white/60 px-2 py-1 rounded-lg hover:bg-white/[0.03] transition-colors">
+                  className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-white/60 px-2 py-1 rounded-lg hover:bg-white/[0.03] hover-lift transition-all">
                   <Download className="h-3 w-3" />
                   <span className="hidden sm:inline">TXT</span>
                 </button>
@@ -810,10 +811,10 @@ export default function ChatPage() {
           <span className="text-[10px] text-white/15 font-mono mr-1 shrink-0 uppercase tracking-widest">Mode</span>
           {modes.map(m => (
             <button key={m.id} onClick={() => setMode(m.id)}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all shrink-0 ${
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all shrink-0 hover-lift ${
                 mode === m.id
-                  ? `bg-gradient-to-r ${m.color} text-white shadow-sm shadow-black/20`
-                  : 'text-white/40 hover:text-white/70 hover:bg-white/[0.04] border border-transparent'
+                  ? `bg-gradient-to-r ${m.color} text-white shadow-sm shadow-black/20 glow-${m.color.includes('emerald') ? 'emerald' : m.color.includes('cyan') ? 'cyan' : m.color.includes('amber') ? 'amber' : m.color.includes('rose') ? 'rose' : 'indigo'}`
+                  : 'text-white/40 hover:text-white/70 hover:bg-white/[0.04] border border-transparent card-glow'
               }`}>
               <span className={mode === m.id ? 'text-white' : 'text-white/30'}>{m.icon}</span>
               {m.label}
@@ -845,7 +846,7 @@ export default function ChatPage() {
                     ];
                     return (
                       <button key={i} onClick={() => { setInput(s.text); inputRef.current?.focus(); }}
-                        className={`flex items-center gap-3 rounded-xl border bg-gradient-to-r ${variants[i % 4]} px-4 py-3 text-left text-sm text-white/60 hover:text-white hover:border-white/15 transition-all group`}>
+                        className={`flex items-center gap-3 rounded-xl border bg-gradient-to-r ${variants[i % 4]} px-4 py-3 text-left text-sm text-white/60 hover:text-white hover:border-white/15 card-glow transition-all group`}>
                         <Search className="h-4 w-4 text-white/20 group-hover:text-white/50 shrink-0" />
                         <div className="text-left"><span>{s.text}</span><div className="text-[10px] text-white/20 mt-0.5">{s.sub}</div></div>
                       </button>
@@ -1013,7 +1014,7 @@ export default function ChatPage() {
         {/* Input */}
         <div className="border-t border-white/[0.02] bg-[#07070f] shrink-0 relative z-10">
           <div className="mx-auto w-full md:max-w-3xl px-3 md:px-4 py-2 md:py-3">
-            <div className="flex items-end gap-2 rounded-xl md:rounded-2xl border border-white/[0.06] bg-white/[0.03] px-2 md:px-3 py-2 md:py-3 focus-within:border-indigo-500/30 focus-within:bg-white/[0.05] focus-within:neon-glow transition-all shadow-sm shadow-black/10">
+            <div className="flex items-end gap-2 rounded-xl md:rounded-2xl border border-white/[0.06] bg-white/[0.03] px-2 md:px-3 py-2 md:py-3 focus-within:border-indigo-500/30 focus-within:bg-white/[0.05] input-glow transition-all shadow-sm shadow-black/10">
               <label className="shrink-0 cursor-pointer text-white/20 hover:text-white/50 transition-colors p-1">
                 <input type="file" accept=".txt,.md,.csv,.json,.bib" onChange={handleFileUpload} className="hidden" disabled={streaming || fileUploading} />
                 {fileUploading ? <span className="h-4 w-4 border border-white/30 border-t-transparent rounded-full animate-spin block" /> : <Upload className="h-4 w-4" />}
