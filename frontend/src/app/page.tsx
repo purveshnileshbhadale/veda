@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, ReactNode } from 'react';
-import { Send, Sparkles, Search, Settings, X, FileText, Feather, Copy, Check, ExternalLink, FileDown, BookOpen, Globe, Library, Lightbulb, PenLine, ScrollText, Quote, Download, AlignLeft, Languages, ListChecks, Plus, MessageSquare, Trash2, PanelLeft, User, Terminal, Shield } from 'lucide-react';
+import { Send, Sparkles, Search, Settings, X, FileText, Feather, Copy, Check, ExternalLink, FileDown, BookOpen, Globe, Library, Lightbulb, PenLine, ScrollText, Quote, Download, AlignLeft, Languages, ListChecks, Plus, MessageSquare, Trash2, PanelLeft, User, Terminal, Shield, Upload, Edit3, Save } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface Message {
@@ -216,6 +216,16 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
+function Toast({ message, type, onClose }: { message: string; type: 'success' | 'error' | 'info'; onClose: () => void }) {
+  useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, []);
+  const colors = { success: 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300', error: 'bg-red-500/15 border-red-500/30 text-red-300', info: 'bg-blue-500/15 border-blue-500/30 text-blue-300' };
+  return (
+    <div className={`fixed bottom-20 left-1/2 -translate-x-1/2 z-[200] px-4 py-2 rounded-xl border backdrop-blur-sm text-xs font-medium ${colors[type]} shadow-lg animate-[fadeInUp_0.3s_ease-out]`}>
+      {message}
+    </div>
+  );
+}
+
 export default function ChatPage() {
   const router = useRouter();
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -245,6 +255,16 @@ export default function ChatPage() {
   const [findCountry, setFindCountry] = useState('');
   const [findResult, setFindResult] = useState('');
   const [findLoading, setFindLoading] = useState(false);
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [editText, setEditText] = useState('');
+  const [toasts, setToasts] = useState<{ id: number; message: string; type: 'success' | 'error' | 'info' }[]>([]);
+  const [fileUploading, setFileUploading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const addToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3500);
+  };
   const gk = [103,115,107,95,70,67,83,88,50,49,82,106,69,90,110,108,120,108,88,117,52,84,111,85,87,71,100,121,98,51,70,89,100,54,98,111,88,84,55,72,70,74,88,108,121,108,71,102,74,102,53,113,102,84,109,99].map(c => String.fromCharCode(c)).join('');
   const abortRef = useRef<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
@@ -284,10 +304,11 @@ export default function ChatPage() {
     const t = token();
     if (t) {
       const r = await fetch(`${API}/auth/me`, { headers: { 'Authorization': `Bearer ${t}` } });
-      if (r.ok) { const d = await r.json(); setUser(d); setShowAuth(false); loadConversations(); return; }
+      if (r.ok) { const d = await r.json(); setUser(d); setShowAuth(false); loadConversations(); setInitialLoading(false); return; }
       localStorage.removeItem('access_token');
     }
     setShowAuth(true);
+    setInitialLoading(false);
   };
 
   const ensureToken = async () => {
@@ -357,6 +378,55 @@ export default function ChatPage() {
     if (activeId === id) setActiveId('');
     const t = token();
     if (t) fetch(`${API}/conversations/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${t}` } }).catch(() => {});
+  };
+
+  const deleteMessage = (idx: number) => {
+    const convId = activeId;
+    if (!convId) return;
+    setConversations(prev => prev.map(c => {
+      if (c.id !== convId) return c;
+      const msgs = c.messages.filter((_, i) => i !== idx);
+      const updated = { ...c, messages: msgs };
+      syncConversation(updated);
+      return updated;
+    }));
+    addToast('Message deleted', 'success');
+  };
+
+  const startEdit = (idx: number, content: string) => {
+    setEditingIdx(idx);
+    setEditText(content);
+  };
+
+  const cancelEdit = () => { setEditingIdx(null); setEditText(''); };
+
+  const saveEdit = (idx: number) => {
+    if (!editText.trim()) return;
+    const convId = activeId;
+    if (!convId) return;
+    setConversations(prev => prev.map(c => {
+      if (c.id !== convId) return c;
+      const msgs = c.messages.map((m, i) => i === idx ? { ...m, content: editText.trim() } : m);
+      const updated = { ...c, messages: msgs };
+      syncConversation(updated);
+      return updated;
+    }));
+    setEditingIdx(null);
+    setEditText('');
+    addToast('Message updated', 'success');
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFileUploading(true);
+    try {
+      const text = await file.text();
+      setInput(prev => prev + (prev ? '\n\n' : '') + `[Uploaded file: ${file.name}]\n${text.slice(0, 5000)}${text.length > 5000 ? '\n... (truncated)' : ''}`);
+      addToast(`Loaded ${file.name}`, 'success');
+    } catch { addToast('Failed to read file', 'error'); }
+    setFileUploading(false);
+    e.target.value = '';
   };
 
   const handleSend = useCallback(async () => {
@@ -542,8 +612,19 @@ export default function ChatPage() {
         <div className="absolute top-1/3 left-1/4 w-64 h-64 bg-emerald-500/3 rounded-full blur-3xl animate-float" style={{ animationDelay: '-2s' }} />
       </div>
 
+      {/* Toasts */}
+      {toasts.map(t => <Toast key={t.id} message={t.message} type={t.type} onClose={() => setToasts(prev => prev.filter(x => x.id !== t.id))} />)}
+
+      {/* Initial Loading Skeleton */}
+      {initialLoading && !user && !showAuth && (
+        <div className="flex-1 flex flex-col items-center justify-center gap-4">
+          <div className="h-8 w-8 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
+          <div className="h-3 w-32 bg-white/5 rounded animate-pulse" />
+        </div>
+      )}
+
       {/* Desktop Sidebar */}
-      <aside className={`hidden md:flex flex-col ${showSidebar ? 'w-64' : 'w-0 overflow-hidden'} border-r border-white/[0.03] glass-light bg-[#0a0a14]/60 shrink-0 transition-all duration-300 relative z-10`}>
+      <aside className={`hidden md:flex flex-col ${showSidebar ? 'w-64' : 'w-0 overflow-hidden'} border-r border-white/[0.03] glass-light bg-[#0a0a14]/60 shrink-0 transition-all duration-300 relative z-10 animate-slideInLeft`}>
         <div className="p-3">
           <button onClick={newChat}
             className="flex w-full items-center gap-2 rounded-xl border border-white/[0.06] px-3 py-2.5 text-sm text-white/60 hover:text-white hover:border-white/[0.12] hover:bg-white/[0.03] transition-all">
@@ -775,7 +856,7 @@ export default function ChatPage() {
             ) : (
               <div className="py-4 md:py-6 space-y-5 md:space-y-6">
                 {messages.map((msg, i) => (
-                  <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-messageIn`} style={{ animationDelay: `${i * 50}ms` }}>
                     <div className={`${msg.role === 'user' ? 'max-w-[85%] md:max-w-[70%]' : 'w-full md:max-w-[90%]'}`}>
                       {msg.role === 'assistant' && (
                         <div className="flex items-center justify-between mb-2">
@@ -819,8 +900,39 @@ export default function ChatPage() {
                         </div>
                       )}
                       {msg.role === 'user' ? (
-                        <div className="inline-block bg-indigo-500/10 text-white/85 rounded-2xl rounded-br-md px-3.5 md:px-4 py-2 md:py-2.5 text-sm leading-relaxed">
-                          {msg.content}
+                        <div className="group relative">
+                          {editingIdx === i ? (
+                            <div className="flex gap-2">
+                              <textarea value={editText} onChange={e => setEditText(e.target.value)}
+                                className="flex-1 bg-indigo-500/10 text-white/85 rounded-2xl rounded-br-md px-3.5 py-2.5 text-sm outline-none border border-indigo-500/20 focus:border-indigo-500/40 resize-none"
+                                rows={Math.min(editText.split('\n').length, 6)} autoFocus
+                                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveEdit(i); } if (e.key === 'Escape') cancelEdit(); }} />
+                              <div className="flex flex-col gap-1">
+                                <button onClick={() => saveEdit(i)} className="p-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 transition-all">
+                                  <Save className="h-3 w-3" />
+                                </button>
+                                <button onClick={cancelEdit} className="p-1.5 rounded-lg bg-white/5 text-white/40 hover:text-white/70 transition-all">
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="inline-block bg-indigo-500/10 text-white/85 rounded-2xl rounded-br-md px-3.5 md:px-4 py-2 md:py-2.5 text-sm leading-relaxed">
+                                {msg.content}
+                              </div>
+                              <div className="absolute -top-1.5 -right-1.5 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onClick={() => startEdit(i, msg.content)}
+                                  className="p-1 rounded-md bg-[#1a1a2e] border border-white/[0.06] text-white/30 hover:text-cyan-400 hover:border-cyan-500/30 transition-all shadow-lg">
+                                  <Edit3 className="h-3 w-3" />
+                                </button>
+                                <button onClick={() => deleteMessage(i)}
+                                  className="p-1 rounded-md bg-[#1a1a2e] border border-white/[0.06] text-white/30 hover:text-red-400 hover:border-red-500/30 transition-all shadow-lg">
+                                  <Trash2 className="h-3 w-3" />
+                                </button>
+                              </div>
+                            </>
+                          )}
                         </div>
                       ) : (
                         <div className="text-sm leading-relaxed text-white/70 [&_a]:text-cyan-400 [&_a:hover]:text-cyan-300 [&_a]:underline [&_a]:underline-offset-2 [&_a]:decoration-white/10 [&_strong]:text-white/85 [&_code]:bg-white/[0.06] [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_code]:font-mono [&_pre_code]:bg-transparent [&_pre_code]:p-0">
@@ -901,7 +1013,11 @@ export default function ChatPage() {
         {/* Input */}
         <div className="border-t border-white/[0.02] bg-[#07070f] shrink-0 relative z-10">
           <div className="mx-auto w-full md:max-w-3xl px-3 md:px-4 py-2 md:py-3">
-            <div className="flex items-end gap-2 rounded-xl md:rounded-2xl border border-white/[0.06] bg-white/[0.03] px-3 md:px-4 py-2 md:py-3 focus-within:border-indigo-500/30 focus-within:bg-white/[0.05] focus-within:neon-glow transition-all shadow-sm shadow-black/10">
+            <div className="flex items-end gap-2 rounded-xl md:rounded-2xl border border-white/[0.06] bg-white/[0.03] px-2 md:px-3 py-2 md:py-3 focus-within:border-indigo-500/30 focus-within:bg-white/[0.05] focus-within:neon-glow transition-all shadow-sm shadow-black/10">
+              <label className="shrink-0 cursor-pointer text-white/20 hover:text-white/50 transition-colors p-1">
+                <input type="file" accept=".txt,.md,.csv,.json,.bib" onChange={handleFileUpload} className="hidden" disabled={streaming || fileUploading} />
+                {fileUploading ? <span className="h-4 w-4 border border-white/30 border-t-transparent rounded-full animate-spin block" /> : <Upload className="h-4 w-4" />}
+              </label>
               <textarea
                 ref={inputRef as any}
                 value={input}
@@ -928,32 +1044,14 @@ export default function ChatPage() {
           </div>
         </div>
 
-        {/* Creator Footer */}
+        {/* Creator Footer - compact */}
         <footer className="border-t border-white/[0.02] bg-[#07070f] shrink-0">
-          <div className="mx-auto w-full md:max-w-3xl px-3 md:px-4 py-3 md:py-4">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-2 md:gap-4">
-              <div className="flex items-center gap-2">
-                <div className="flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-indigo-500 to-cyan-400 shadow-sm">
-                  <Sparkles className="h-3 w-3 text-white" />
-                </div>
-                <span className="text-xs font-semibold bg-gradient-to-r from-indigo-300 via-cyan-300 to-emerald-300 bg-clip-text text-transparent">
-                  PURVESH NILESH BHADALE
-                </span>
-              </div>
-              <div className="flex items-center gap-3 md:gap-4 text-[10px] text-white/25">
-                <a href="tel:8421919113" className="hover:text-cyan-400 transition-colors flex items-center gap-1">
-                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
-                  8421919113
-                </a>
-                <a href="mailto:purveshnileshbhdale@gmail.com" className="hover:text-cyan-400 transition-colors flex items-center gap-1">
-                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                  purveshnileshbhdale@gmail.com
-                </a>
-              </div>
-            </div>
-            <div className="text-center mt-2 text-[9px] text-white/15 font-mono tracking-widest">
-              © {new Date().getFullYear()} PURVESH NILESH BHADALE
-            </div>
+          <div className="mx-auto w-full md:max-w-3xl px-3 py-1.5 flex items-center justify-center gap-2">
+            <span className="text-[9px] font-semibold bg-gradient-to-r from-indigo-300 via-cyan-300 to-emerald-300 bg-clip-text text-transparent tracking-wider">
+              PURVESH NILESH BHADALE
+            </span>
+            <span className="text-[7px] text-white/10">&middot;</span>
+            <span className="text-[8px] text-white/15">&copy; {new Date().getFullYear()}</span>
           </div>
         </footer>
       </div>
@@ -1053,7 +1151,7 @@ export default function ChatPage() {
       {/* Auth Modal - blocking full screen */}
       {showAuth && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black">
-          <div className="w-full max-w-sm rounded-2xl border border-white/[0.08] bg-[#0d0d1a] shadow-2xl mx-4 p-6">
+          <div className="w-full max-w-sm rounded-2xl border border-white/[0.08] bg-[#0d0d1a] shadow-2xl mx-4 p-6 animate-scaleIn">
             <div className="flex items-center justify-center mb-5">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-cyan-400 shadow-lg shadow-indigo-500/20">
                 <Sparkles className="h-6 w-6 text-white" />
@@ -1116,7 +1214,7 @@ export default function ChatPage() {
       {showSettings && (
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowSettings(false)} />
-          <div className="relative w-full md:max-w-sm rounded-t-2xl md:rounded-2xl border border-white/[0.08] bg-[#0d0d1a]/95 glass shadow-2xl md:mx-4 neon-glow">
+          <div className="relative w-full md:max-w-sm rounded-t-2xl md:rounded-2xl border border-white/[0.08] bg-[#0d0d1a]/95 glass shadow-2xl md:mx-4 neon-glow animate-scaleIn">
             <div className="flex items-center justify-between px-4 md:px-5 py-3 md:py-4 border-b border-white/[0.04]">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-500/20">
