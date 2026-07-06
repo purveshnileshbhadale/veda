@@ -126,10 +126,12 @@ class ChatRequest(BaseModel):
     messages: List[Dict[str, str]]
     mode: str = "research"
     api_key: Optional[str] = None
+    provider: Optional[str] = None
 
 class HumanizeRequest(BaseModel):
     text: str
     api_key: Optional[str] = None
+    provider: Optional[str] = None
 
 class PaperSearchRequest(BaseModel):
     query: str
@@ -192,7 +194,7 @@ async def chat_stream(
 
     system_prompt = SYSTEM_PROMPTS.get(body.mode, SYSTEM_PROMPTS["research"])
     full_messages = [{"role": "system", "content": system_prompt + paper_context}] + body.messages
-    client = AIClient(api_key=body.api_key)
+    client = AIClient(provider=body.provider, api_key=body.api_key)
     async def generate():
         async for chunk in client.chat_stream(full_messages):
             yield f"data: {chunk}\n\n"
@@ -244,6 +246,7 @@ async def search_papers(body: PaperSearchRequest):
 
 @router.post("/humanize")
 async def humanize(body: HumanizeRequest, current_user: User = Depends(get_current_user)):
+    from app.core.ai_client import AIClient
     client = AIClient(api_key=body.api_key)
     prompt = f"""Rewrite the following text to sound more natural and human-like, as if written by an experienced researcher rather than an AI. Vary sentence structure, use natural transitions, and avoid robotic or repetitive phrasing. Keep the same information and academic tone, but make it flow naturally.
  
@@ -255,6 +258,7 @@ async def humanize(body: HumanizeRequest, current_user: User = Depends(get_curre
 class GeneratePaperRequest(BaseModel):
     topic: str
     api_key: Optional[str] = None
+    provider: Optional[str] = None
 
 @router.post("/generate-paper")
 async def generate_paper(body: GeneratePaperRequest, current_user: User = Depends(get_current_user)):
@@ -304,3 +308,72 @@ Write in formal academic English. Each section should be substantial (3-8 paragr
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={"Content-Disposition": f"attachment; filename={safe}.docx"}
     )
+
+class FindMUNDocRequest(BaseModel):
+    doc_type: str  # speech, resolution, working_paper, position_paper, stance, deep_research
+    topic: str
+    country: Optional[str] = None
+    api_key: Optional[str] = None
+
+async def fetch_wikipedia(query: str, max_results: int = 3) -> str:
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as c:
+            search_url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={query}&format=json&srlimit={max_results}"
+            resp = await c.get(search_url)
+            if resp.status_code != 200:
+                return ""
+            data = resp.json()
+            pages = data.get("query", {}).get("search", [])
+            results = []
+            for page in pages[:max_results]:
+                title = page.get("title", "")
+                page_url = f"https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro&explaintext&titles={title}&format=json"
+                pr = await c.get(page_url)
+                if pr.status_code != 200:
+                    continue
+                pd = pr.json()
+                pages_data = pd.get("query", {}).get("pages", {})
+                for pid, info in pages_data.items():
+                    extract = info.get("extract", "")[:2000]
+                    if extract:
+                        results.append(f"--- {title} ---\n{extract}")
+            return "\n\n".join(results) if results else ""
+    except:
+        return ""
+
+FINDPROMPTS = {
+    "speech": "Find and summarize real speeches delivered by officials on this topic. Include who gave them, when, where, and key quotes or talking points.",
+    "resolution": "Find and describe real UN resolutions related to this topic. Include resolution numbers, year adopted, key provisions, and voting records.",
+    "position_paper": "Research the actual stated positions of key countries/stakeholders on this issue. Cite official statements, policy documents, or diplomatic communications.",
+    "working_paper": "Research real working papers, reports, or draft documents produced by UN bodies, think tanks, or governments on this topic. Summarize their key findings.",
+    "stance": "Analyze the actual stances of major powers on this issue. Include official policy positions, recent statements, alliances, and voting patterns in UN bodies.",
+    "deep_research": "Conduct thorough research on this topic using available sources. Cover historical background, key stakeholders, legal frameworks, recent developments, statistical data, and competing perspectives.",
+}
+
+@router.post("/find-mun-doc")
+async def find_mun_doc(body: FindMUNDocRequest, current_user: User = Depends(get_current_user)):
+    wiki_query = f"{body.topic} {' '.join(body.country.split()[:3]) if body.country else ''} United Nations"
+    wiki_context = await fetch_wikipedia(wiki_query)
+
+    find_prompt = FINDPROMPTS.get(body.doc_type, "Research this topic thoroughly.")
+    context = ""
+    if wiki_context:
+        context = f"\n\nHere is real information from Wikipedia that you MUST use as source material. Reference specific facts, figures, and details from this context in your response:\n{wiki_context}"
+
+    system = f"""You are VEDA-MUN Research, an expert at finding and analyzing real MUN-related documents and information.
+
+{find_prompt}
+
+ALWAYS ground your response in real facts. If you reference specific documents, include names, dates, and relevant details. Use formal diplomatic language. Organize your response with clear headings."""
+
+    user_prompt = f"Find information about: {body.topic}"
+    if body.country:
+        user_prompt += f"\nCountry/Stakeholder: {body.country}"
+    user_prompt += context
+
+    client = AIClient(api_key=body.api_key)
+    result = await client.chat([
+        {"role": "system", "content": system},
+        {"role": "user", "content": user_prompt},
+    ])
+    return {"result": result}

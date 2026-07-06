@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, ReactNode } from 'react';
-import { Send, Sparkles, Search, Settings, X, FileText, Feather, Copy, Check, ExternalLink, FileDown, BookOpen, Globe, Library, Lightbulb, PenLine, ScrollText, Quote, Download, AlignLeft, Languages, ListChecks, Plus, MessageSquare, Trash2, PanelLeft, User, Terminal, Shield, Upload, Edit3, Save } from 'lucide-react';
+import { Send, Sparkles, Search, Settings, X, FileText, Feather, Copy, Check, ExternalLink, FileDown, BookOpen, Globe, Library, Lightbulb, PenLine, ScrollText, Quote, Download, AlignLeft, Languages, ListChecks, Plus, MessageSquare, Trash2, PanelLeft, User, Terminal, Shield, Upload, Edit3, Save, Cpu } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface Message {
@@ -260,11 +260,28 @@ export default function ChatPage() {
   const [toasts, setToasts] = useState<{ id: number; message: string; type: 'success' | 'error' | 'info' }[]>([]);
   const [fileUploading, setFileUploading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [renameId, setRenameId] = useState<string | null>(null);
+  const [renameText, setRenameText] = useState('');
+  const [showPrompts, setShowPrompts] = useState(false);
+  const [prompts, setPrompts] = useState<{ name: string; text: string }[]>([]);
+  const [promptName, setPromptName] = useState('');
+  const [promptText, setPromptText] = useState('');
+  const [provider, setProvider] = useState('groq');
+  const [showProvider, setShowProvider] = useState(false);
+  const [msgSearch, setMsgSearch] = useState('');
+  const [showMsgSearch, setShowMsgSearch] = useState(false);
+  const [autoScroll, setAutoScroll] = useState(true);
   const addToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3500);
   };
+  useEffect(() => {
+    const saved = localStorage.getItem('veda_prompts');
+    if (saved) try { setPrompts(JSON.parse(saved)); } catch {}
+    const savedProvider = localStorage.getItem('veda_provider');
+    if (savedProvider) setProvider(savedProvider);
+  }, []);
   const gk = [103,115,107,95,70,67,83,88,50,49,82,106,69,90,110,108,120,108,88,117,52,84,111,85,87,71,100,121,98,51,70,89,100,54,98,111,88,84,55,72,70,74,88,108,121,108,71,102,74,102,53,113,102,84,109,99].map(c => String.fromCharCode(c)).join('');
   const abortRef = useRef<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
@@ -274,7 +291,7 @@ export default function ChatPage() {
   const messages = active?.messages || [];
   const filtered = conversations.filter(c => c.title.toLowerCase().includes(searchQuery.toLowerCase()));
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+  useEffect(() => { if (autoScroll) endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, autoScroll]);
   useEffect(() => { if (!streaming) inputRef.current?.focus(); }, [streaming]);
   useEffect(() => { checkSession(); }, []);
 
@@ -461,7 +478,7 @@ export default function ChatPage() {
     try {
       const res = await fetch(`${API}/ai/chat/stream`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token()}` },
-        body: JSON.stringify({ messages: currentMsgs, mode, api_key: gk }), signal: controller.signal,
+        body: JSON.stringify({ messages: currentMsgs, mode, api_key: gk, provider }), signal: controller.signal,
       });
       if (!res.ok) { const errText = await res.text().catch(() => ''); throw new Error(errText || 'Stream failed'); }
       const reader = res.body?.getReader();
@@ -529,7 +546,7 @@ export default function ChatPage() {
     try {
       const r = await fetch(`${API}/ai/humanize`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` },
-        body: JSON.stringify({ text, api_key: gk }),
+        body: JSON.stringify({ text, api_key: gk, provider }),
       });
       if (!r.ok) { setHumanizing(null); return; }
       const d = await r.json();
@@ -715,7 +732,17 @@ export default function ChatPage() {
                   }`}
                   onClick={() => { setActiveId(c.id); setShowSidebar(false); }}>
                   <MessageSquare className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate flex-1 text-xs">{c.title}</span>
+              <div className="flex-1 min-w-0">
+                {renameId === c.id ? (
+                  <input value={renameText} onChange={e => setRenameText(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { setConversations(prev => prev.map(x => x.id === c.id ? { ...x, title: renameText || x.title } : x)); setRenameId(null); syncConversation({ ...c, title: renameText || c.title }); } if (e.key === 'Escape') setRenameId(null); }}
+                    onBlur={() => { setConversations(prev => prev.map(x => x.id === c.id ? { ...x, title: renameText || x.title } : x)); setRenameId(null); syncConversation({ ...c, title: renameText || c.title }); }}
+                    className="w-full bg-white/[0.08] text-xs text-white/80 rounded px-1.5 py-0.5 outline-none border border-indigo-500/30" autoFocus
+                    onClick={e => e.stopPropagation()} />
+                ) : (
+                  <span className="truncate block text-xs" onDoubleClick={() => { setRenameId(c.id); setRenameText(c.title); }}>{c.title}</span>
+                )}
+              </div>
                   <button onClick={(e) => { e.stopPropagation(); deleteChat(c.id); }}
                     className="opacity-0 group-hover:opacity-100 text-white/20 hover:text-red-400 transition-all">
                     <Trash2 className="h-3 w-3" />
@@ -803,6 +830,23 @@ export default function ChatPage() {
               </>
             )}
             <span className="text-[11px] text-white/20 ml-2 font-mono hidden md:inline">{modes.find(m => m.id === mode)?.label || 'Research'}</span>
+            <div className="relative">
+              <button onClick={() => setShowProvider(!showProvider)}
+                className="flex items-center gap-1 text-[10px] text-white/25 hover:text-white/50 px-1.5 py-0.5 rounded-md hover:bg-white/[0.03] transition-all font-mono ml-1">
+                <Cpu className="h-2.5 w-2.5" />
+                <span className="uppercase tracking-wider">{provider}</span>
+              </button>
+              {showProvider && (
+                <div className="absolute right-0 top-full mt-1 w-32 rounded-xl border border-white/[0.06] bg-[#0d0d1a] glass shadow-2xl py-1 z-50 animate-scaleIn">
+                  {['groq', 'gemini', 'openrouter', 'deepseek'].map(p => (
+                    <button key={p} onClick={() => { setProvider(p); setShowProvider(false); localStorage.setItem('veda_provider', p); }}
+                      className={`w-full text-left px-3 py-1.5 text-xs font-mono transition-all ${provider === p ? 'text-emerald-400 bg-emerald-500/10' : 'text-white/50 hover:text-white/80 hover:bg-white/[0.03]'}`}>
+                      {p.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
@@ -825,6 +869,19 @@ export default function ChatPage() {
         {/* Messages */}
         <div className="flex-1 overflow-y-auto scrollbar-thin bg-[#07070f] relative z-10">
           <div className="mx-auto w-full md:max-w-3xl px-3 md:px-4">
+            {showMsgSearch && messages.length > 0 && (
+              <div className="sticky top-0 z-10 pt-2 pb-1">
+                <div className="relative">
+                  <Search className="h-3 w-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-white/20" />
+                  <input value={msgSearch} onChange={e => setMsgSearch(e.target.value)} placeholder="Search this conversation..."
+                    className="w-full h-8 rounded-lg bg-white/[0.04] border border-white/[0.06] pl-7 pr-8 text-xs text-white/60 outline-none placeholder:text-white/15 focus:border-indigo-500/30 transition-colors" autoFocus
+                    onKeyDown={e => { if (e.key === 'Escape') { setShowMsgSearch(false); setMsgSearch(''); } }} />
+                  <button onClick={() => { setShowMsgSearch(false); setMsgSearch(''); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-white/20 hover:text-white/50">
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              </div>
+            )}
             {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center min-h-[60vh] md:min-h-[70vh] text-center px-2">
                 <div className={`flex h-14 w-14 md:h-16 md:w-16 items-center justify-center rounded-2xl bg-gradient-to-br shadow-lg mb-5 ${
@@ -1041,7 +1098,31 @@ export default function ChatPage() {
                 </button>
               )}
             </div>
-            <p className="text-[10px] text-white/15 text-center mt-2 font-mono tracking-wider">VEDA · {modes.find(m => m.id === mode)?.label || 'Research'}</p>
+            <div className="flex items-center justify-between mt-2">
+              <div className="flex items-center gap-2">
+                <button onClick={() => setShowMsgSearch(!showMsgSearch)}
+                  className={`flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded-md transition-all ${showMsgSearch ? 'text-cyan-400 bg-cyan-500/10' : 'text-white/15 hover:text-white/30'}`}>
+                  <Search className="h-2.5 w-2.5" />
+                  Find
+                </button>
+                <button onClick={() => { setShowPrompts(true); }}
+                  className="flex items-center gap-1 text-[9px] font-mono text-white/15 hover:text-white/30 px-1.5 py-0.5 rounded-md hover:bg-white/[0.03] transition-all">
+                  <BookOpen className="h-2.5 w-2.5" />
+                  Prompts
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[9px] text-white/12 font-mono">
+                  {input.length > 0 ? `${input.length}c · ${Math.ceil(input.length / 4)}t` : ''}
+                </span>
+                <button onClick={() => setAutoScroll(!autoScroll)}
+                  className={`flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded-md transition-all ${autoScroll ? 'text-white/15 hover:text-white/30' : 'text-amber-400 bg-amber-500/10'}`}>
+                  <ScrollText className="h-2.5 w-2.5" />
+                  {autoScroll ? 'Auto' : 'Paused'}
+                </button>
+                <span className="text-[9px] text-white/15 font-mono tracking-wider">VEDA</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1085,6 +1166,63 @@ export default function ChatPage() {
               <button onClick={generatePaper} disabled={!generateTopic.trim() || generating}
                 className="flex items-center gap-2 text-xs px-4 py-2 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
                 {generating ? <><span className="h-3 w-3 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" /> Generating...</> : <><FileDown className="h-3 w-3" /> Generate Paper</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Prompt Library Modal */}
+      {showPrompts && (
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={() => { setShowPrompts(false); setPromptName(''); setPromptText(''); }} />
+          <div className="relative w-full md:max-w-lg rounded-t-2xl md:rounded-2xl border border-white/[0.08] bg-[#0d0d1a]/95 glass shadow-2xl p-4 md:p-5 md:mx-4 max-h-[80vh] overflow-y-auto animate-scaleIn">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-500/20">
+                  <BookOpen className="h-4 w-4 text-indigo-400" />
+                </div>
+                <h2 className="text-sm font-medium text-white/70">Prompt Library</h2>
+              </div>
+              <button onClick={() => { setShowPrompts(false); setPromptName(''); setPromptText(''); }} className="text-white/20 hover:text-white/50 transition-colors">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="space-y-2 mb-4">
+              {prompts.length === 0 && <p className="text-xs text-white/20 text-center py-4">No saved prompts yet</p>}
+              {prompts.map((p, i) => (
+                <div key={i} className="group flex items-center gap-2 glass-light rounded-xl border border-white/[0.04] px-3 py-2">
+                  <button onClick={() => { setInput(p.text); setShowPrompts(false); addToast('Prompt loaded', 'success'); }}
+                    className="flex-1 text-left">
+                    <div className="text-xs font-medium text-white/70">{p.name}</div>
+                    <div className="text-[10px] text-white/30 truncate">{p.text.slice(0, 80)}</div>
+                  </button>
+                  <button onClick={() => {
+                    const updated = prompts.filter((_, j) => j !== i);
+                    setPrompts(updated);
+                    localStorage.setItem('veda_prompts', JSON.stringify(updated));
+                    addToast('Prompt deleted', 'info');
+                  }} className="opacity-0 group-hover:opacity-100 text-white/20 hover:text-red-400 transition-all p-1">
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="border-t border-white/[0.04] pt-3">
+              <input value={promptName} onChange={e => setPromptName(e.target.value)} placeholder="Prompt name..."
+                className="w-full h-8 rounded-lg bg-white/[0.04] border border-white/[0.06] px-3 text-xs text-white/60 outline-none placeholder:text-white/15 focus:border-indigo-500/30 mb-2" />
+              <textarea value={promptText} onChange={e => setPromptText(e.target.value)} placeholder="Prompt text..."
+                className="w-full h-20 rounded-lg bg-white/[0.04] border border-white/[0.06] px-3 py-2 text-xs text-white/60 outline-none placeholder:text-white/15 focus:border-indigo-500/30 resize-none mb-2" />
+              <button onClick={() => {
+                if (!promptName.trim() || !promptText.trim()) return;
+                const updated = [...prompts, { name: promptName.trim(), text: promptText.trim() }];
+                setPrompts(updated);
+                localStorage.setItem('veda_prompts', JSON.stringify(updated));
+                setPromptName(''); setPromptText('');
+                addToast('Prompt saved', 'success');
+              }} disabled={!promptName.trim() || !promptText.trim()}
+                className="w-full h-8 rounded-lg bg-gradient-to-r from-indigo-500 to-cyan-400 text-white text-xs font-medium hover:opacity-90 disabled:opacity-20 transition-all">
+                Save Prompt
               </button>
             </div>
           </div>
