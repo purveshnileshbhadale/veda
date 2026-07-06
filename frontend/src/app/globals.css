@@ -426,3 +426,122 @@ textarea {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
+
+/* Recording pulse for streaming */
+.recording-pulse {
+  position: relative;
+}
+.recording-pulse::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  border: 2px solid rgba(99,102,241,0.3);
+  animation: pulse-ring 1.5s ease-out infinite;
+}
+.recording-pulse::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: inherit;
+  border: 2px solid rgba(99,102,241,0.15);
+  animation: pulse-ring 1.5s ease-out infinite 0.5s;
+}
+
+/* Gradient scrollbar track */
+.scrollbar-gradient::-webkit-scrollbar {
+  width: 5px;
+}
+.scrollbar-gradient::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-gradient::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(99,102,241,0.3), rgba(52,211,153,0.3));
+  border-radius: 10px;
+}
+.scrollbar-gradient::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(99,102,241,0.5), rgba(52,211,153,0.5));
+}
+
+/* Ripple effect for buttons */
+.ripple {
+  position: relative;
+  overflow: hidden;
+}
+.ripple::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(255,255,255,0.15), transparent 60%);
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+.ripple:hover::after {
+  opacity: 1;
+}
+
+/* Focus ring glow */
+.focus-glow:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(99,102,241,0.3), 0 0 15px rgba(99,102,241,0.15);
+}
+
+/* Message hover highlight */
+.msg-hover {
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.msg-hover:hover {
+  background: rgba(99,102,241,0.02);
+  border-color: rgba(99,102,241,0.08);
+}
+
+/* Scroll to bottom button */
+.scroll-bottom-btn {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* Subtle watermark text */
+.watermark {
+  position: fixed;
+  bottom: 40px;
+  right: 20px;
+  font-size: 60px;
+  font-weight: 900;
+  color: rgba(255,255,255,0.015);
+  pointer-events: none;
+  z-index: 0;
+  font-family: monospace;
+  letter-spacing: -4px;
+  user-select: none;
+}
+
+/* Active sidebar indicator glow */
+.sidebar-active {
+  position: relative;
+}
+.sidebar-active::before {
+  content: '';
+  position: absolute;
+  left: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(180deg, rgba(99,102,241,0.6), rgba(52,211,153,0.4));
+  box-shadow: 0 0 10px rgba(99,102,241,0.3);
+}
+
+/* Skeleton gradient pulse */
+.skeleton-pulse {
+  background: linear-gradient(90deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.02) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2s ease-in-out infinite;
+  border-radius: 8px;
+}

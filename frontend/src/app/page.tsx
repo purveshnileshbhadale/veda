@@ -623,12 +623,14 @@ export default function ChatPage() {
   return (
     <div className="flex h-screen bg-[#07070f] bg-grid bg-stars">
       {/* Floating background orbs */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl animate-float" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-cyan-500/5 rounded-full blur-3xl animate-float" style={{ animationDelay: '-4s' }} />
-        <div className="absolute top-1/3 left-1/4 w-64 h-64 bg-emerald-500/3 rounded-full blur-3xl animate-float" style={{ animationDelay: '-2s' }} />
-        <div className="absolute top-1/2 right-1/3 w-48 h-48 bg-rose-500/3 rounded-full blur-3xl animate-float" style={{ animationDelay: '-6s' }} />
-      </div>
+        <div className="fixed inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute -top-40 -right-40 w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl animate-float" />
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-cyan-500/5 rounded-full blur-3xl animate-float" style={{ animationDelay: '-4s' }} />
+          <div className="absolute top-1/3 left-1/4 w-64 h-64 bg-emerald-500/3 rounded-full blur-3xl animate-float" style={{ animationDelay: '-2s' }} />
+          <div className="absolute top-1/2 right-1/3 w-48 h-48 bg-rose-500/3 rounded-full blur-3xl animate-float" style={{ animationDelay: '-6s' }} />
+          <div className="absolute bottom-1/4 right-1/4 w-32 h-32 bg-amber-500/2 rounded-full blur-3xl animate-float" style={{ animationDelay: '-8s' }} />
+        </div>
+        <div className="watermark">VEDA</div>
 
       {/* Toasts */}
       {toasts.map(t => <Toast key={t.id} message={t.message} type={t.type} onClose={() => setToasts(prev => prev.filter(x => x.id !== t.id))} />)}
@@ -642,7 +644,7 @@ export default function ChatPage() {
       )}
 
       {/* Desktop Sidebar */}
-      <aside className={`hidden md:flex flex-col ${showSidebar ? 'w-64' : 'w-0 overflow-hidden'} border-r border-white/[0.03] glass-light bg-[#0a0a14]/60 shrink-0 transition-all duration-300 relative z-10 animate-slideInLeft`}>
+      <aside className={`hidden md:flex flex-col ${showSidebar ? 'w-64' : 'w-0 overflow-hidden'} border-r border-white/[0.03] glass-light bg-[#0a0a14]/60 shrink-0 transition-all duration-300 relative z-10 animate-slideInLeft scrollbar-gradient`}>
         <div className="p-3">
           <button onClick={newChat}
             className="flex w-full items-center gap-2 rounded-xl border border-white/[0.06] px-3 py-2.5 text-sm text-white/60 hover:text-white hover:border-white/[0.12] hover:bg-white/[0.03] hover-lift transition-all">
@@ -664,7 +666,7 @@ export default function ChatPage() {
           ) : filtered.map(c => (
             <div key={c.id}
               className={`group flex items-center gap-2 rounded-xl px-3 py-2 text-sm cursor-pointer transition-all ${
-                c.id === activeId ? 'bg-white/[0.07] text-white shadow-sm' : 'text-white/40 hover:bg-white/[0.03] hover:text-white/70'
+                c.id === activeId ? 'bg-white/[0.07] text-white shadow-sm sidebar-active' : 'text-white/40 hover:bg-white/[0.03] hover:text-white/70'
               }`}
               onClick={() => setActiveId(c.id)}>
               <MessageSquare className="h-3.5 w-3.5 shrink-0" />
@@ -867,7 +869,7 @@ export default function ChatPage() {
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto scrollbar-thin bg-[#07070f] relative z-10">
+        <div className="flex-1 overflow-y-auto scrollbar-gradient bg-[#07070f] relative z-10">
           <div className="mx-auto w-full md:max-w-3xl px-3 md:px-4">
             {showMsgSearch && messages.length > 0 && (
               <div className="sticky top-0 z-10 pt-2 pb-1">
@@ -914,7 +916,7 @@ export default function ChatPage() {
             ) : (
               <div className="py-4 md:py-6 space-y-5 md:space-y-6">
                 {messages.map((msg, i) => (
-                  <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-messageIn`} style={{ animationDelay: `${i * 50}ms` }}>
+                  <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-messageIn msg-hover`} style={{ animationDelay: `${i * 50}ms` }}>
                     <div className={`${msg.role === 'user' ? 'max-w-[85%] md:max-w-[70%]' : 'w-full md:max-w-[90%]'}`}>
                       {msg.role === 'assistant' && (
                         <div className="flex items-center justify-between mb-2">
@@ -997,9 +999,9 @@ export default function ChatPage() {
                           {msg.content ? md(msg.content) : (
                             streaming && i === messages.length - 1 ? (
                               <span className="inline-flex gap-1">
-                                <span className="h-2 w-2 bg-white/30 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                                <span className="h-2 w-2 bg-white/30 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                                <span className="h-2 w-2 bg-white/30 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                                <span className="h-2 w-2 rounded-full animate-bounce" style={{ animationDelay: '0ms', background: 'linear-gradient(135deg, #818cf8, #34d399)' }} />
+                                <span className="h-2 w-2 rounded-full animate-bounce" style={{ animationDelay: '150ms', background: 'linear-gradient(135deg, #34d399, #22d3ee)' }} />
+                                <span className="h-2 w-2 rounded-full animate-bounce" style={{ animationDelay: '300ms', background: 'linear-gradient(135deg, #22d3ee, #818cf8)' }} />
                               </span>
                             ) : ''
                           )}
@@ -1088,12 +1090,12 @@ export default function ChatPage() {
               />
               {streaming ? (
                 <button onClick={() => { abortRef.current?.abort(); setStreaming(false); }}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white/50 hover:bg-white/20 hover:text-white transition-all">
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white/50 hover:bg-white/20 hover:text-white recording-pulse transition-all">
                   <span className="text-[10px] font-medium">■</span>
                 </button>
               ) : (
                 <button onClick={handleSend} disabled={!input.trim()}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-400 text-white hover:opacity-90 disabled:opacity-20 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-500/25 neon-glow-intense">
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-400 text-white hover:opacity-90 disabled:opacity-20 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-500/25 neon-glow-intense ripple">
                   <Send className="h-3.5 w-3.5" />
                 </button>
               )}
