@@ -676,6 +676,18 @@ export default function ChatPage() {
     <div className="flex h-screen bg-[#07070f] bg-grid bg-stars animate-scaleEntrance">
       {/* Scanline overlay */}
       <div className="fixed inset-0 pointer-events-none z-[1] opacity-[0.015] animate-scanline" style={{ background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.03) 2px, rgba(255,255,255,0.03) 4px)' }} />
+      {/* Background Hologram Spinner */}
+      <div className="hologram-bg">
+        <div className="hologram-core" />
+        <div className="hologram-ring hologram-ring-1" />
+        <div className="hologram-ring hologram-ring-2" />
+        <div className="hologram-ring hologram-ring-3" />
+        <div className="hologram-ring hologram-ring-4" />
+        <div className="hologram-ring hologram-ring-5" />
+        <div className="hologram-dot hologram-dot-1" style={{ top: '50%', left: '50%', marginTop: '-1.5px', marginLeft: '-1.5px' }} />
+        <div className="hologram-dot hologram-dot-2" style={{ top: '50%', left: '50%', marginTop: '-1.5px', marginLeft: '-1.5px' }} />
+        <div className="hologram-dot hologram-dot-3" style={{ top: '50%', left: '50%', marginTop: '-1.5px', marginLeft: '-1.5px' }} />
+      </div>
       {/* Floating background orbs */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden">
           <div className="absolute -top-40 -right-40 w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl animate-float" />
