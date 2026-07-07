@@ -308,6 +308,41 @@ export default function ChatPage() {
   const messages = active?.messages || [];
   const filtered = conversations.filter(c => c.title.toLowerCase().includes(searchQuery.toLowerCase()));
 
+  const particleRef = useRef<number>(0);
+  useEffect(() => {
+    let frame = 0;
+    const handler = (e: MouseEvent) => {
+      frame++;
+      if (frame % 3 !== 0) return;
+      const p = document.createElement('div');
+      p.className = 'cursor-particle';
+      p.style.left = `${e.clientX}px`;
+      p.style.top = `${e.clientY}px`;
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 10 + Math.random() * 20;
+      p.style.setProperty('--dx', `${Math.cos(angle) * dist}px`);
+      p.style.setProperty('--dy', `${Math.sin(angle) * dist}px`);
+      document.body.appendChild(p);
+      setTimeout(() => p.remove(), 800);
+    };
+    window.addEventListener('mousemove', handler);
+    return () => window.removeEventListener('mousemove', handler);
+  }, []);
+  useEffect(() => {
+    const ambient = Array.from({ length: 20 }, () => {
+      const p = document.createElement('div');
+      p.className = 'ambient-particle';
+      p.style.left = `${Math.random() * 100}vw`;
+      p.style.top = `${Math.random() * 100}vh`;
+      p.style.setProperty('--tx', `${(Math.random() - 0.5) * 100}px`);
+      p.style.setProperty('--ty', `${(Math.random() - 0.5) * -80}px`);
+      p.style.animationDelay = `${Math.random() * 6}s`;
+      p.style.animationDuration = `${4 + Math.random() * 4}s`;
+      document.body.appendChild(p);
+      return p;
+    });
+    return () => ambient.forEach(p => p.remove());
+  }, []);
   useEffect(() => { if (autoScroll) endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, autoScroll]);
   useEffect(() => { if (!streaming) inputRef.current?.focus(); }, [streaming]);
   useEffect(() => { checkSession(); }, []);
@@ -638,7 +673,9 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex h-screen bg-[#07070f] bg-grid bg-stars">
+    <div className="flex h-screen bg-[#07070f] bg-grid bg-stars animate-scaleEntrance">
+      {/* Scanline overlay */}
+      <div className="fixed inset-0 pointer-events-none z-[1] opacity-[0.015] animate-scanline" style={{ background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.03) 2px, rgba(255,255,255,0.03) 4px)' }} />
       {/* Floating background orbs */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden">
           <div className="absolute -top-40 -right-40 w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl animate-float" />
@@ -661,7 +698,7 @@ export default function ChatPage() {
       )}
 
       {/* Desktop Sidebar */}
-      <aside className={`hidden md:flex flex-col ${showSidebar ? 'w-64' : 'w-0 overflow-hidden'} border-r border-white/[0.03] glass-light bg-[#0a0a14]/60 shrink-0 transition-all duration-300 relative z-10 animate-slideInLeft scrollbar-gradient`}>
+      <aside className={`hidden md:flex flex-col ${showSidebar ? 'w-64' : 'w-0 overflow-hidden'} border-r border-white/[0.03] glass-light bg-[#0a0a14]/60 shrink-0 transition-all duration-300 relative z-10 animate-slideInLeft scrollbar-gradient border-rotate`}>
         <div className="p-3">
           <button onClick={newChat}
             className="flex w-full items-center gap-2 rounded-xl border border-white/[0.06] px-3 py-2.5 text-sm text-white/60 hover:text-white hover:border-white/[0.12] hover:bg-white/[0.03] hover-lift transition-all">
@@ -798,14 +835,14 @@ export default function ChatPage() {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 border-rotate">
         {/* Header */}
         <header className="flex items-center justify-between px-4 h-11 border-b border-white/[0.03] shrink-0 bg-[#07070f]/80 glass-light relative z-10 section-glow">
           <div className="flex items-center gap-2 min-w-0">
             <button onClick={() => setShowSidebar(!showSidebar)} className="text-white/30 hover:text-white/60 transition-colors shrink-0 hover-lift">
               <PanelLeft className="h-4 w-4" />
             </button>
-            <span className="text-[11px] font-mono font-bold bg-gradient-to-r from-indigo-300 via-cyan-300 to-emerald-300 bg-clip-text text-transparent neon-text">VEDA</span>
+            <span className="text-[11px] font-mono font-bold bg-gradient-to-r from-indigo-300 via-cyan-300 to-emerald-300 bg-clip-text text-transparent neon-text hologram">VEDA</span>
             {active && (
               <span className="text-[11px] text-white/30 truncate ml-1 hidden sm:inline font-mono">/ {active.title}</span>
             )}
@@ -1012,14 +1049,14 @@ export default function ChatPage() {
                           )}
                         </div>
                       ) : (
-                        <div className="text-sm leading-relaxed text-white/70 [&_a]:text-cyan-400 [&_a:hover]:text-cyan-300 [&_a]:underline [&_a]:underline-offset-2 [&_a]:decoration-white/10 [&_strong]:text-white/85 [&_code]:bg-white/[0.06] [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_code]:font-mono [&_pre_code]:bg-transparent [&_pre_code]:p-0">
+                        <div className="text-sm leading-relaxed text-white/70 [&_a]:text-cyan-400 [&_a:hover]:text-cyan-300 [&_a]:underline [&_a]:underline-offset-2 [&_a]:decoration-white/10 [&_strong]:text-white/85 [&_code]:bg-white/[0.06] [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_code]:font-mono [&_pre_code]:bg-transparent [&_pre_code]:p-0 gradient-reveal">
                           {msg.content ? md(msg.content) : (
                             streaming && i === messages.length - 1 ? (
-                              <span className="inline-flex gap-1">
-                                <span className="h-2 w-2 rounded-full animate-bounce" style={{ animationDelay: '0ms', background: 'linear-gradient(135deg, #818cf8, #34d399)' }} />
-                                <span className="h-2 w-2 rounded-full animate-bounce" style={{ animationDelay: '150ms', background: 'linear-gradient(135deg, #34d399, #22d3ee)' }} />
-                                <span className="h-2 w-2 rounded-full animate-bounce" style={{ animationDelay: '300ms', background: 'linear-gradient(135deg, #22d3ee, #818cf8)' }} />
-                              </span>
+                    <span className="inline-flex gap-1.5">
+                      <span className="h-2 w-2 rounded-full morph-dot" style={{ animationDelay: '0ms', background: 'linear-gradient(135deg, #818cf8, #34d399)' }} />
+                      <span className="h-2 w-2 rounded-full morph-dot" style={{ animationDelay: '200ms', background: 'linear-gradient(135deg, #34d399, #22d3ee)' }} />
+                      <span className="h-2 w-2 rounded-full morph-dot" style={{ animationDelay: '400ms', background: 'linear-gradient(135deg, #22d3ee, #818cf8)' }} />
+                    </span>
                             ) : ''
                           )}
                         </div>
@@ -1090,7 +1127,7 @@ export default function ChatPage() {
         {/* Input */}
         <div className="border-t border-white/[0.02] bg-[#07070f] shrink-0 relative z-10">
           <div className="mx-auto w-full md:max-w-3xl px-3 md:px-4 py-2 md:py-3">
-            <div className="flex items-end gap-2 rounded-xl md:rounded-2xl border border-white/[0.06] bg-white/[0.03] px-2 md:px-3 py-2 md:py-3 focus-within:border-indigo-500/30 focus-within:bg-white/[0.05] input-glow transition-all shadow-sm shadow-black/10">
+            <div className={`flex items-end gap-2 rounded-xl md:rounded-2xl border border-white/[0.06] bg-white/[0.03] px-2 md:px-3 py-2 md:py-3 focus-within:border-indigo-500/30 focus-within:bg-white/[0.05] input-glow input-pulse-glow transition-all shadow-sm shadow-black/10 ${input.trim() ? 'active-content' : ''}`}>
               <label className="shrink-0 cursor-pointer text-white/20 hover:text-white/50 transition-colors p-1">
                 <input type="file" accept=".txt,.md,.csv,.json,.bib" onChange={handleFileUpload} className="hidden" disabled={streaming || fileUploading} />
                 {fileUploading ? <span className="h-4 w-4 border border-white/30 border-t-transparent rounded-full animate-spin block" /> : <Upload className="h-4 w-4" />}
@@ -1112,7 +1149,7 @@ export default function ChatPage() {
                 </button>
               ) : (
                 <button onClick={handleSend} disabled={!input.trim()}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-400 text-white hover:opacity-90 disabled:opacity-20 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-500/25 neon-glow-intense ripple">
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-400 text-white hover:opacity-90 disabled:opacity-20 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-500/25 neon-glow-intense ripple lightning-hover">
                   <Send className="h-3.5 w-3.5" />
                 </button>
               )}
