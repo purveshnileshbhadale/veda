@@ -795,3 +795,183 @@ textarea {
   0%, 100% { transform: scale(1); opacity: 0.5; }
   50% { transform: scale(1.3); opacity: 1; }
 }
+
+/* ── UI Upgrade v2 ── */
+
+/* Premium glass with subtle gradient overlay */
+.glass-premium {
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  position: relative;
+  background: rgba(10,10,20,0.75);
+}
+.glass-premium::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(99,102,241,0.08), rgba(52,211,153,0.04), transparent 60%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* AI message accent bar */
+.message-ai {
+  position: relative;
+  padding-left: 12px;
+}
+.message-ai::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 2.5px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, rgba(99,102,241,0.5), rgba(52,211,153,0.3));
+  box-shadow: 0 0 8px rgba(99,102,241,0.15);
+}
+
+/* User message gradient bubble */
+.message-user-bubble {
+  background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(52,211,153,0.06));
+  border: 1px solid rgba(99,102,241,0.1);
+  position: relative;
+}
+.message-user-bubble::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, transparent 60%, rgba(99,102,241,0.03));
+  pointer-events: none;
+}
+
+/* Ripple effect on click */
+.ripple-click {
+  position: relative;
+  overflow: hidden;
+}
+.ripple-click::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.3), transparent 70%);
+  width: 100px;
+  height: 100px;
+  margin-top: -50px;
+  margin-left: -50px;
+  top: var(--ry, 50%);
+  left: var(--rx, 50%);
+  transform: scale(0);
+  opacity: 0;
+  pointer-events: none;
+}
+.ripple-click:active::after {
+  animation: rippleAnim 0.5s ease-out;
+}
+@keyframes rippleAnim {
+  0% { transform: scale(0); opacity: 0.6; }
+  100% { transform: scale(4); opacity: 0; }
+}
+
+/* Stagger entrance for lists */
+.stagger-item {
+  opacity: 0;
+  animation: staggerFadeIn 0.35s ease-out forwards;
+}
+@keyframes staggerFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Enhanced empty state card */
+.empty-card {
+  position: relative;
+  background: linear-gradient(135deg, rgba(99,102,241,0.04), transparent);
+  border: 1px solid rgba(99,102,241,0.06);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+.empty-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent, rgba(99,102,241,0.02), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+.empty-card:hover::before { opacity: 1; }
+.empty-card:hover {
+  border-color: rgba(99,102,241,0.15);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(99,102,241,0.06);
+}
+
+/* Animated header bottom bar */
+.header-bar {
+  position: relative;
+}
+.header-bar::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(99,102,241,0.25), rgba(52,211,153,0.2), rgba(34,211,238,0.25), transparent);
+  background-size: 200% 100%;
+  animation: headerBarMove 4s linear infinite;
+}
+@keyframes headerBarMove {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+/* Enhanced modal backdrop */
+.modal-backdrop {
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Enhanced skeleton shimmer */
+.skeleton-enhanced {
+  background: linear-gradient(90deg, rgba(255,255,255,0.02) 0%, rgba(99,102,241,0.06) 50%, rgba(255,255,255,0.02) 100%);
+  background-size: 200% 100%;
+  border-radius: 8px;
+  animation: skeletonShimmer 2s ease-in-out infinite;
+}
+@keyframes skeletonShimmer {
+  0%, 100% { background-position: -200% center; opacity: 0.5; }
+  50% { background-position: 200% center; opacity: 1; }
+}
+
+/* Pulse glow on active mode button */
+@keyframes modePulse {
+  0%, 100% { box-shadow: 0 0 12px rgba(99,102,241,0.15); }
+  50% { box-shadow: 0 0 25px rgba(99,102,241,0.3), 0 0 50px rgba(99,102,241,0.1); }
+}
+.mode-active-pulse {
+  animation: modePulse 3s ease-in-out infinite;
+}
+
+/* Smooth tool button with icon background */
+.tool-btn {
+  transition: all 0.2s ease;
+  position: relative;
+}
+.tool-btn:hover {
+  background: rgba(99,102,241,0.06);
+  color: rgba(255,255,255,0.7);
+  border-color: rgba(99,102,241,0.1);
+}
+
+/* Conversation hover glow for sidebar */
+.conv-glow:hover {
+  box-shadow: inset 2px 0 0 rgba(99,102,241,0.15);
+}

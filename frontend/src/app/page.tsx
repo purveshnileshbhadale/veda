@@ -32,6 +32,10 @@ const modes: ModeConfig[] = [
       { text: 'Find recent papers on transformer architectures in NLP', sub: 'arXiv paper search' },
       { text: 'Improve my abstract for clarity and impact', sub: 'Writing polish' },
       { text: 'Suggest citations for my methodology section', sub: 'Citation help' },
+      { text: 'Evaluate my research question for feasibility and novelty', sub: 'RQ evaluation' },
+      { text: 'Create a literature review matrix for papers on federated learning', sub: 'Lit matrix' },
+      { text: 'Recommend a methodology for studying social media echo chambers', sub: 'Methodology match' },
+      { text: 'Outline a grant proposal for AI in healthcare research', sub: 'Grant outline' },
     ]},
   { id: 'mun', label: 'MUN', icon: <Globe className="h-3.5 w-3.5" />, desc: 'Model UN preparation', placeholder: 'Ask about MUN position papers, speeches...', color: 'from-emerald-500 to-teal-400', btnColor: 'border-emerald-500/10 hover:border-emerald-500/30',
     suggestions: [
@@ -43,6 +47,10 @@ const modes: ModeConfig[] = [
       { text: 'Conduct deep research on Arctic geopolitics and territorial claims', sub: 'Deep research' },
       { text: 'Analyze stance of US, China, Russia on Taiwan', sub: 'Stance analysis' },
       { text: 'Summarize China stance on South China Sea for UNSC', sub: 'Country research' },
+      { text: 'Draft a moderated caucus speech on vaccine equity for Brazil', sub: 'Caucus speech' },
+      { text: 'Analyze voting blocs in the UN General Assembly on climate', sub: 'Bloc analysis' },
+      { text: 'Which UN committee handles AI governance and cyber warfare?', sub: 'Committee guide' },
+      { text: 'Draft a crisis note for a simulated Security Council emergency', sub: 'Crisis note' },
     ]},
   { id: 'literature', label: 'Lit Review', icon: <Library className="h-3.5 w-3.5" />, desc: 'Find & synthesize papers', placeholder: 'Search papers, synthesize findings...', color: 'from-violet-500 to-purple-400', btnColor: 'border-violet-500/10 hover:border-violet-500/30',
     suggestions: [
@@ -50,6 +58,8 @@ const modes: ModeConfig[] = [
       { text: 'Find research gaps in federated learning for healthcare', sub: 'Gap analysis' },
       { text: 'Compare transformer vs CNN approaches in medical imaging', sub: 'Paper comparison' },
       { text: 'Generate a BibTeX bibliography on reinforcement learning', sub: 'Citation export' },
+      { text: 'Create a PRISMA flow diagram for my systematic review', sub: 'PRISMA flow' },
+      { text: 'Find me relevant conferences for publishing NLP research', sub: 'Conference search' },
     ]},
   { id: 'brainstorm', label: 'Ideas', icon: <Lightbulb className="h-3.5 w-3.5" />, desc: 'Generate & refine ideas', placeholder: 'Brainstorm research ideas...', color: 'from-amber-500 to-orange-400', btnColor: 'border-amber-500/10 hover:border-amber-500/30',
     suggestions: [
@@ -57,6 +67,7 @@ const modes: ModeConfig[] = [
       { text: 'How can blockchain technology be applied to academic publishing?', sub: 'Cross-disciplinary' },
       { text: 'What if we combined GANs with reinforcement learning for drug discovery?', sub: 'Provocative question' },
       { text: 'Suggest innovative methodologies for studying social media polarization', sub: 'Methodology design' },
+      { text: 'What are emerging trends in explainable AI for healthcare?', sub: 'Trend spotting' },
     ]},
   { id: 'editor', label: 'Editor', icon: <PenLine className="h-3.5 w-3.5" />, desc: 'Polish academic writing', placeholder: 'Paste text to edit or polish...', color: 'from-rose-500 to-pink-400', btnColor: 'border-rose-500/10 hover:border-rose-500/30',
     suggestions: [
@@ -64,6 +75,7 @@ const modes: ModeConfig[] = [
       { text: 'Make this abstract more concise and impactful', sub: 'Conciseness' },
       { text: 'Check this methodology section for logical gaps', sub: 'Argument check' },
       { text: 'Format these citations in APA style', sub: 'Citation formatting' },
+      { text: 'Convert this paragraph from passive to active voice', sub: 'Voice change' },
     ]},
   { id: 'review', label: 'Review', icon: <ScrollText className="h-3.5 w-3.5" />, desc: 'Peer review simulator', placeholder: 'Paste a draft to get peer review...', color: 'from-cyan-500 to-blue-400', btnColor: 'border-cyan-500/10 hover:border-cyan-500/30',
     suggestions: [
@@ -71,6 +83,7 @@ const modes: ModeConfig[] = [
       { text: 'Critique my methodology — are there validity threats?', sub: 'Methods critique' },
       { text: 'Assess the contribution and novelty of this work', sub: 'Contribution assessment' },
       { text: 'Give me a full peer review of this discussion section', sub: 'Full review' },
+      { text: 'Check for ethical concerns in this study design', sub: 'Ethics check' },
     ]},
   { id: 'experiment', label: 'Lab', icon: <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>, desc: 'Design experiments & simulations', placeholder: 'Design experiments, simulate outcomes...', color: 'from-pink-500 to-rose-400', btnColor: 'border-pink-500/10 hover:border-pink-500/30',
     suggestions: [
@@ -78,6 +91,7 @@ const modes: ModeConfig[] = [
       { text: 'Simulate possible outcomes for a clinical trial with n=500', sub: 'Outcome simulation' },
       { text: 'What variables should I control for in an observational study?', sub: 'Variable identification' },
       { text: 'Run a Monte Carlo simulation for portfolio risk analysis', sub: 'Monte Carlo simulation' },
+      { text: 'Suggest appropriate statistical tests for my data (ANOVA vs t-test vs chi-square)', sub: 'Stats advice' },
     ]},
 ];
 
@@ -710,10 +724,10 @@ export default function ChatPage() {
       )}
 
       {/* Desktop Sidebar */}
-      <aside className={`hidden md:flex flex-col ${showSidebar ? 'w-64' : 'w-0 overflow-hidden'} border-r border-white/[0.03] glass-light bg-[#0a0a14]/60 shrink-0 transition-all duration-300 relative z-10 animate-slideInLeft scrollbar-gradient border-rotate`}>
+      <aside className={`hidden md:flex flex-col ${showSidebar ? 'w-64' : 'w-0 overflow-hidden'} border-r border-white/[0.03] glass-premium bg-[#0a0a14]/60 shrink-0 transition-all duration-300 relative z-10 animate-slideInLeft scrollbar-gradient border-rotate`}>
         <div className="p-3">
           <button onClick={newChat}
-            className="flex w-full items-center gap-2 rounded-xl border border-white/[0.06] px-3 py-2.5 text-sm text-white/60 hover:text-white hover:border-white/[0.12] hover:bg-white/[0.03] hover-lift transition-all">
+            className="flex w-full items-center gap-2 rounded-xl border border-white/[0.06] px-3 py-2.5 text-sm text-white/60 hover:text-white hover:border-white/[0.12] hover:bg-white/[0.03] hover-lift transition-all ripple-click">
             <Plus className="h-4 w-4" />
             New chat
           </button>
@@ -729,9 +743,9 @@ export default function ChatPage() {
         <div className="flex-1 overflow-y-auto px-2 space-y-0.5 scrollbar-thin">
           {filtered.length === 0 ? (
             <p className="text-[10px] text-white/15 text-center pt-4">No conversations</p>
-          ) : filtered.map(c => (
-            <div key={c.id}
-              className={`group flex items-center gap-2 rounded-xl px-3 py-2 text-sm cursor-pointer transition-all ${
+          ) : filtered.map((c, idx) => (
+            <div key={c.id} style={{ animationDelay: `${idx * 40}ms` }}
+              className={`group flex items-center gap-2 rounded-xl px-3 py-2 text-sm cursor-pointer transition-all stagger-item conv-glow ${
                 c.id === activeId ? 'bg-white/[0.07] text-white shadow-sm sidebar-active' : 'text-white/40 hover:bg-white/[0.03] hover:text-white/70'
               }`}
               onClick={() => setActiveId(c.id)}>
@@ -774,7 +788,7 @@ export default function ChatPage() {
       {showSidebar && (
         <div className="md:hidden fixed inset-0 z-40 flex">
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowSidebar(false)} />
-          <aside className="relative w-72 border-r border-white/[0.06] bg-[#0a0a14]/95 glass-light flex flex-col h-full">
+          <aside className="relative w-72 border-r border-white/[0.06] glass-premium flex flex-col h-full">
             <div className="p-3">
               <button onClick={() => { newChat(); setShowSidebar(false); }}
                 className="flex w-full items-center gap-2 rounded-xl border border-white/[0.06] px-3 py-2.5 text-sm text-white/60 hover:text-white hover:border-white/[0.12] hover:bg-white/[0.03] transition-all">
@@ -849,7 +863,7 @@ export default function ChatPage() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 border-rotate">
         {/* Header */}
-        <header className="flex items-center justify-between px-4 h-11 border-b border-white/[0.03] shrink-0 bg-[#07070f]/80 glass-light relative z-10 section-glow">
+        <header className="flex items-center justify-between px-4 h-11 border-b border-white/[0.03] shrink-0 bg-[#07070f]/80 glass-light relative z-10 header-bar">
           <div className="flex items-center gap-2 min-w-0">
             <button onClick={() => setShowSidebar(!showSidebar)} className="text-white/30 hover:text-white/60 transition-colors shrink-0 hover-lift">
               <PanelLeft className="h-4 w-4" />
@@ -925,7 +939,7 @@ export default function ChatPage() {
             <button key={m.id} onClick={() => setMode(m.id)}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all shrink-0 hover-lift ${
                 mode === m.id
-                  ? `bg-gradient-to-r ${m.color} text-white shadow-sm shadow-black/20 glow-${m.color.includes('emerald') ? 'emerald' : m.color.includes('cyan') ? 'cyan' : m.color.includes('amber') ? 'amber' : m.color.includes('rose') ? 'rose' : 'indigo'}`
+                  ? `bg-gradient-to-r ${m.color} text-white shadow-sm shadow-black/20 glow-${m.color.includes('emerald') ? 'emerald' : m.color.includes('cyan') ? 'cyan' : m.color.includes('amber') ? 'amber' : m.color.includes('rose') ? 'rose' : 'indigo'} mode-active-pulse`
                   : 'text-white/40 hover:text-white/70 hover:bg-white/[0.04] border border-transparent card-glow'
               }`}>
               <span className={mode === m.id ? 'text-white' : 'text-white/30'}>{m.icon}</span>
@@ -971,8 +985,14 @@ export default function ChatPage() {
                     ];
                     return (
                       <button key={i} onClick={() => { setInput(s.text); inputRef.current?.focus(); }}
-                        className={`flex items-center gap-3 rounded-xl border bg-gradient-to-r ${variants[i % 4]} px-4 py-3 text-left text-sm text-white/60 hover:text-white hover:border-white/15 card-glow transition-all group`}>
-                        <Search className="h-4 w-4 text-white/20 group-hover:text-white/50 shrink-0" />
+                        className={`flex items-center gap-3 rounded-xl border bg-gradient-to-r ${variants[i % 4]} px-4 py-3 text-left text-sm text-white/60 hover:text-white hover:border-white/15 card-glow empty-card transition-all group`}>
+                        <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${
+                          i % 4 === 0 ? 'bg-indigo-500/15 text-indigo-400' :
+                          i % 4 === 1 ? 'bg-emerald-500/15 text-emerald-400' :
+                          i % 4 === 2 ? 'bg-amber-500/15 text-amber-400' : 'bg-rose-500/15 text-rose-400'
+                        }`}>
+                          <Search className="h-3.5 w-3.5" />
+                        </div>
                         <div className="text-left"><span>{s.text}</span><div className="text-[10px] text-white/20 mt-0.5">{s.sub}</div></div>
                       </button>
                     );
@@ -983,7 +1003,7 @@ export default function ChatPage() {
               <div className="py-4 md:py-6 space-y-5 md:space-y-6">
                 {messages.map((msg, i) => (
                   <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-messageIn msg-hover`} style={{ animationDelay: `${i * 50}ms` }}>
-                    <div className={`${msg.role === 'user' ? 'max-w-[85%] md:max-w-[70%]' : 'w-full md:max-w-[90%]'}`}>
+                    <div className={`${msg.role === 'user' ? 'max-w-[85%] md:max-w-[70%]' : 'w-full md:max-w-[90%] message-ai'}`}>
                       {msg.role === 'assistant' && (
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
@@ -1044,7 +1064,7 @@ export default function ChatPage() {
                             </div>
                           ) : (
                             <>
-                              <div className="inline-block bg-indigo-500/10 text-white/85 rounded-2xl rounded-br-md px-3.5 md:px-4 py-2 md:py-2.5 text-sm leading-relaxed">
+                              <div className="inline-block message-user-bubble text-white/85 rounded-2xl rounded-br-md px-3.5 md:px-4 py-2 md:py-2.5 text-sm leading-relaxed">
                                 {msg.content}
                               </div>
                               <div className="absolute -top-1.5 -right-1.5 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1091,6 +1111,12 @@ export default function ChatPage() {
                 { icon: <FileText className="h-3 w-3" />, label: 'Abstract', prompt: 'Write an abstract for a paper about' },
                 { icon: <Search className="h-3 w-3" />, label: 'Find Papers', prompt: 'Find recent papers about' },
                 { icon: <Quote className="h-3 w-3" />, label: 'Cite', prompt: 'Generate citations in APA format for the topic:' },
+                { icon: <Lightbulb className="h-3 w-3" />, label: 'RQ Check', prompt: 'Evaluate this research question for feasibility, novelty, and significance:' },
+                { icon: <BookOpen className="h-3 w-3" />, label: 'Lit Matrix', prompt: 'Create a literature review matrix comparing key papers on ' },
+                { icon: <ListChecks className="h-3 w-3" />, label: 'Method', prompt: 'What research methodology should I use for studying ' },
+                { icon: <FileDown className="h-3 w-3" />, label: 'Grant', prompt: 'Outline a grant proposal for researching ' },
+                { icon: <ScrollText className="h-3 w-3" />, label: 'Timeline', prompt: 'Create a 6-month research timeline for a project on ' },
+                { icon: <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>, label: 'Conference', prompt: 'Find major conferences accepting papers on ' },
               ] : mode === 'mun' ? [
                 { icon: <Globe className="h-3 w-3" />, label: 'Position Paper', prompt: 'Write a position paper for ' },
                 { icon: <ScrollText className="h-3 w-3" />, label: 'Resolution', prompt: 'Draft a UN resolution on ' },
@@ -1100,6 +1126,11 @@ export default function ChatPage() {
                 { icon: <FileText className="h-3 w-3" />, label: 'Working Paper', prompt: 'Draft a working paper for committee discussion on ' },
                 { icon: <Search className="h-3 w-3" />, label: 'Deep Research', prompt: 'Conduct deep research on ' },
                 { icon: <ListChecks className="h-3 w-3" />, label: 'Stance', prompt: 'Analyze the stance of all major powers on ' },
+                { icon: <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>, label: 'Caucus', prompt: 'Draft a moderated caucus speech of 60 seconds for ' },
+                { icon: <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>, label: 'Blocs', prompt: 'Analyze the voting blocs and alliances on the issue of ' },
+                { icon: <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>, label: 'Crisis Note', prompt: 'Draft a crisis committee note from the delegate of ' },
+                { icon: <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>, label: 'Treaty', prompt: 'Find relevant treaties and conventions related to ' },
+                { icon: <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>, label: 'Strategy', prompt: 'Develop a negotiation strategy for the delegate of ' },
               ] : mode === 'literature' ? [
                 { icon: <BookOpen className="h-3 w-3" />, label: 'Summarize', prompt: 'Summarize the key papers on ' },
                 { icon: <ListChecks className="h-3 w-3" />, label: 'Compare', prompt: 'Compare and contrast different approaches to ' },
@@ -1127,7 +1158,7 @@ export default function ChatPage() {
                 { icon: <ListChecks className="h-3 w-3" />, label: 'Full Review', prompt: 'Give me a comprehensive peer review:\n\n' },
               ]).map((tool, i) => (
                 <button key={i} onClick={() => { setInput(tool.prompt); inputRef.current?.focus(); }}
-                  className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] text-white/30 hover:text-white/60 hover:bg-white/[0.04] transition-colors shrink-0 whitespace-nowrap">
+                  className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] text-white/30 hover:text-white/60 hover:bg-white/[0.04] transition-colors shrink-0 whitespace-nowrap tool-btn border border-transparent">
                   {tool.icon}
                   {tool.label}
                 </button>
@@ -1161,7 +1192,7 @@ export default function ChatPage() {
                 </button>
               ) : (
                 <button onClick={handleSend} disabled={!input.trim()}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-400 text-white hover:opacity-90 disabled:opacity-20 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-500/25 neon-glow-intense ripple lightning-hover">
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-400 text-white hover:opacity-90 disabled:opacity-20 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-500/25 neon-glow-intense ripple lightning-hover ripple-click">
                   <Send className="h-3.5 w-3.5" />
                 </button>
               )}
@@ -1209,8 +1240,8 @@ export default function ChatPage() {
       {/* Generate Paper Modal */}
       {showGenerate && (
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={() => { if (!generating) { setShowGenerate(false); setGenerateTopic(''); } }} />
-          <div className="relative w-full md:max-w-md rounded-t-2xl md:rounded-2xl border border-white/[0.08] bg-[#0d0d1a]/95 glass shadow-2xl p-4 md:p-5 md:mx-4 neon-glow">
+          <div className="fixed inset-0 modal-backdrop" onClick={() => { if (!generating) { setShowGenerate(false); setGenerateTopic(''); } }} />
+          <div className="relative w-full md:max-w-md rounded-t-2xl md:rounded-2xl border border-white/[0.08] glass-premium shadow-2xl p-4 md:p-5 md:mx-4 neon-glow">
             <div className="flex items-center justify-between mb-3 md:mb-4">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/20">
@@ -1243,8 +1274,8 @@ export default function ChatPage() {
       {/* Prompt Library Modal */}
       {showPrompts && (
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={() => { setShowPrompts(false); setPromptName(''); setPromptText(''); }} />
-          <div className="relative w-full md:max-w-lg rounded-t-2xl md:rounded-2xl border border-white/[0.08] bg-[#0d0d1a]/95 glass shadow-2xl p-4 md:p-5 md:mx-4 max-h-[80vh] overflow-y-auto animate-scaleIn">
+          <div className="fixed inset-0 modal-backdrop" onClick={() => { setShowPrompts(false); setPromptName(''); setPromptText(''); }} />
+          <div className="relative w-full md:max-w-lg rounded-t-2xl md:rounded-2xl border border-white/[0.08] glass-premium shadow-2xl p-4 md:p-5 md:mx-4 max-h-[80vh] overflow-y-auto animate-scaleIn">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-500/20">
@@ -1300,8 +1331,8 @@ export default function ChatPage() {
       {/* Find MUN Documents Modal */}
       {showFindMun && (
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={() => { if (!findLoading) { setShowFindMun(false); setFindResult(''); } }} />
-          <div className="relative w-full md:max-w-2xl rounded-t-2xl md:rounded-2xl border border-white/[0.08] bg-[#0d0d1a]/95 glass shadow-2xl p-4 md:p-5 md:mx-4 max-h-[85vh] flex flex-col neon-glow">
+          <div className="fixed inset-0 modal-backdrop" onClick={() => { if (!findLoading) { setShowFindMun(false); setFindResult(''); } }} />
+          <div className="relative w-full md:max-w-2xl rounded-t-2xl md:rounded-2xl border border-white/[0.08] glass-premium shadow-2xl p-4 md:p-5 md:mx-4 max-h-[85vh] flex flex-col neon-glow">
             <div className="flex items-center justify-between mb-3 md:mb-4 shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/20">
@@ -1358,7 +1389,7 @@ export default function ChatPage() {
       {/* Auth Modal - blocking full screen */}
       {showAuth && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black">
-          <div className="w-full max-w-sm rounded-2xl border border-white/[0.08] bg-[#0d0d1a] shadow-2xl mx-4 p-6 animate-scaleIn">
+          <div className="w-full max-w-sm rounded-2xl border border-white/[0.08] glass-premium shadow-2xl mx-4 p-6 animate-scaleIn">
             <div className="flex items-center justify-center mb-5">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-cyan-400 shadow-lg shadow-indigo-500/20">
                 <Sparkles className="h-6 w-6 text-white" />
@@ -1420,8 +1451,8 @@ export default function ChatPage() {
       {/* Settings Modal */}
       {showSettings && (
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowSettings(false)} />
-          <div className="relative w-full md:max-w-sm rounded-t-2xl md:rounded-2xl border border-white/[0.08] bg-[#0d0d1a]/95 glass shadow-2xl md:mx-4 neon-glow animate-scaleIn">
+          <div className="fixed inset-0 modal-backdrop" onClick={() => setShowSettings(false)} />
+          <div className="relative w-full md:max-w-sm rounded-t-2xl md:rounded-2xl border border-white/[0.08] glass-premium shadow-2xl md:mx-4 neon-glow animate-scaleIn">
             <div className="flex items-center justify-between px-4 md:px-5 py-3 md:py-4 border-b border-white/[0.04]">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-500/20">
