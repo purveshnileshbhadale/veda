@@ -690,36 +690,124 @@ export default function ChatPage() {
     setVideoGenerating(false);
   };
 
-  const videoPreviewRef = useRef<HTMLDivElement>(null);
+  const videoCanvasRef = useRef<HTMLCanvasElement>(null);
 
-  const recordVideo = async () => {
-    const el = videoPreviewRef.current;
-    if (!el || !videoScript) return;
+  const generateVideo = async () => {
+    const canvas = videoCanvasRef.current;
+    if (!canvas || !videoScript) return;
     setVideoRecording(true);
-    try {
-      const stream = await (navigator.mediaDevices as any).getDisplayMedia({ video: { cursor: 'never' }, audio: false });
-      const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
-      const chunks: BlobPart[] = [];
-      recorder.ondataavailable = e => chunks.push(e.data);
-      recorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'video/webm' });
-        const url = URL.createObjectURL(blob);
-        setVideoPreviewUrl(url);
-        stream.getTracks().forEach((t: MediaStreamTrack) => t.stop());
-      };
-      recorder.start();
-      // Play through slides
-      const slides = videoScript.slides || [];
-      for (let i = 0; i < slides.length; i++) {
-        el.style.transform = `translateX(-${i * 100}%)`;
-        await new Promise(r => setTimeout(r, 6000));
-      }
-      recorder.stop();
-    } catch {
+    const ctx = canvas.getContext('2d')!;
+    const W = 1280, H = 720;
+    canvas.width = W; canvas.height = H;
+    const slides = videoScript.slides || [];
+    const fps = 30;
+    const secPerSlide = 5;
+    const totalFrames = slides.length * secPerSlide * fps;
+
+    const stream = canvas.captureStream(fps);
+    const recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
+    const chunks: BlobPart[] = [];
+    recorder.ondataavailable = e => chunks.push(e.data);
+    recorder.onstop = () => {
+      const blob = new Blob(chunks, { type: 'video/webm' });
+      setVideoPreviewUrl(URL.createObjectURL(blob));
       setVideoRecording(false);
-      addToast('Recording cancelled or failed', 'error');
+    };
+    recorder.start();
+
+    // Speak narration while rendering
+    let utt: SpeechSynthesisUtterance | null = null;
+    const speakSlide = (text: string) => {
+      speechSynthesis.cancel();
+      if (text) { utt = new SpeechSynthesisUtterance(text); utt.rate = 0.9; utt.pitch = 1; speechSynthesis.speak(utt); }
+    };
+
+    for (let si = 0; si < slides.length; si++) {
+      const slide = slides[si];
+      speakSlide(slide.narration || '');
+      for (let f = 0; f < secPerSlide * fps; f++) {
+        const t = f / (secPerSlide * fps); // 0→1
+        const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+        ctx.clearRect(0, 0, W, H);
+        // Background gradient
+        const grad = ctx.createLinearGradient(0, 0, W, H);
+        grad.addColorStop(0, '#0a0a1a'); grad.addColorStop(0.5, '#0d0d24'); grad.addColorStop(1, '#0a0a1a');
+        ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
+        // Grid dots
+        ctx.fillStyle = 'rgba(99,102,241,0.04)';
+        for (let gx = 0; gx < W; gx += 32) for (let gy = 0; gy < H; gy += 32) { ctx.beginPath(); ctx.arc(gx, gy, 1, 0, Math.PI * 2); ctx.fill(); }
+        // Glow orb
+        const orbGrad = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, 300);
+        orbGrad.addColorStop(0, 'rgba(99,102,241,0.04)'); orbGrad.addColorStop(1, 'transparent');
+        ctx.fillStyle = orbGrad; ctx.fillRect(0, 0, W, H);
+
+        ctx.save();
+        const slideIn = Math.min(ease * 1.5, 1);
+        ctx.globalAlpha = slideIn;
+        const sy = (1 - slideIn) * 40;
+        ctx.translate(0, sy);
+
+        if (slide.type === 'title') {
+          // Icon
+          ctx.shadowColor = 'rgba(99,102,241,0.3)'; ctx.shadowBlur = 30;
+          ctx.fillStyle = '#6366f1'; ctx.beginPath(); ctx.roundRect(W/2-30, 80, 60, 60, 14); ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = '#fff'; ctx.font = '28px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('▶', W/2, 120);
+          // Title
+          ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = 'bold 36px sans-serif'; ctx.textAlign = 'center';
+          wrapText(ctx, slide.heading || '', W/2, 200, W-120, 50);
+          // Authors
+          if (slide.subheading) { ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '20px sans-serif'; ctx.fillText(slide.subheading, W/2, 320); }
+          // Label
+          ctx.fillStyle = 'rgba(99,102,241,0.3)'; ctx.font = '14px monospace'; ctx.fillText('VEDA Research Video', W/2, H-60);
+        } else {
+          // Section heading with accent bar
+          ctx.fillStyle = '#6366f1'; ctx.fillRect(80, 100, 4, 36);
+          ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.font = 'bold 28px sans-serif'; ctx.textAlign = 'left';
+          ctx.fillText(slide.heading || '', 100, 128);
+          // Bullets
+          const bullets = slide.bullets || [];
+          const startY = 180;
+          const lineH = 50;
+          const maxVisible = Math.floor(t * bullets.length * 2);
+          for (let bi = 0; bi < bullets.length; bi++) {
+            if (bi > maxVisible) break;
+            const ba = Math.min((t * bullets.length * 2 - bi) * 2, 1);
+            ctx.globalAlpha = ba;
+            ctx.fillStyle = '#22d3ee'; ctx.beginPath(); ctx.arc(110, startY + bi * lineH, 5, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = '18px sans-serif'; ctx.textAlign = 'left';
+            wrapText(ctx, bullets[bi], 130, startY + bi * lineH + 6, W - 200, 24);
+          }
+          ctx.globalAlpha = 1;
+        }
+        ctx.restore();
+
+        // Progress bar at bottom
+        const progress = (si + t) / slides.length;
+        ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fillRect(0, H-4, W, 4);
+        const pgGrad = ctx.createLinearGradient(0, 0, W, 0);
+        pgGrad.addColorStop(0, 'rgba(99,102,241,0.6)'); pgGrad.addColorStop(1, 'rgba(52,211,153,0.4)');
+        ctx.fillStyle = pgGrad; ctx.fillRect(0, H-4, W * progress, 4);
+
+        // Slide indicator
+        ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.font = '12px monospace'; ctx.textAlign = 'center';
+        ctx.fillText(`${si + 1} / ${slides.length}`, W/2, H-16);
+
+        await new Promise(r => requestAnimationFrame(r));
+      }
     }
-    setVideoRecording(false);
+    speechSynthesis.cancel();
+    recorder.stop();
+  };
+
+  const wrapText = (ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxW: number, lineH: number) => {
+    const words = text.split(' '); let line = '', ly = y;
+    for (const w of words) {
+      const test = line + (line ? ' ' : '') + w;
+      if (ctx.measureText(test).width > maxW && line) { ctx.fillText(line, x, ly); line = w; ly += lineH; }
+      else line = test;
+    }
+    if (line) ctx.fillText(line, x, ly);
   };
 
   const downloadVideo = () => {
@@ -1508,53 +1596,36 @@ export default function ChatPage() {
               </div>
             ) : (
               <div className="flex-1 flex flex-col min-h-0">
-                <div className="text-[10px] text-white/20 font-mono mb-2">Preview — share your screen when recording</div>
-                <div className="relative flex-1 rounded-xl border border-white/[0.06] bg-[#0a0a14] overflow-hidden mb-3 min-h-[200px]">
-                  <div ref={videoPreviewRef} className="flex h-full transition-transform duration-700 ease-in-out" style={{ transform: 'translateX(0%)' }}>
-                    {(videoScript.slides || []).map((slide: any, idx: number) => (
-                      <div key={idx} className="min-w-full h-full flex flex-col items-center justify-center p-6 md:p-10">
-                        {slide.type === 'title' ? (
-                          <div className="text-center">
-                            <div className="flex h-12 w-12 mx-auto mb-4 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-indigo-500 shadow-lg">
-                              <Video className="h-6 w-6 text-white" />
-                            </div>
-                            <h2 className="text-lg md:text-xl font-bold text-white/90 mb-2">{slide.heading}</h2>
-                            {slide.subheading && <p className="text-xs text-white/40">{slide.subheading}</p>}
-                          </div>
-                        ) : (
-                          <div className="w-full">
-                            <div className="flex items-center gap-2 mb-4">
-                              <div className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
-                              <h3 className="text-sm md:text-base font-semibold text-white/80">{slide.heading}</h3>
-                            </div>
-                            <ul className="space-y-2">
-                              {(slide.bullets || []).map((b: string, bi: number) => (
-                                <li key={bi} className="flex items-start gap-2 text-xs md:text-sm text-white/60 leading-relaxed">
-                                  <span className="h-1.5 w-1.5 rounded-full bg-indigo-400/50 mt-1.5 shrink-0" />
-                                  {b}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                        {slide.narration && (
-                          <div className="mt-auto pt-4 text-[10px] text-white/20 italic border-t border-white/[0.04] w-full text-center">
-                            "{slide.narration}"
-                          </div>
-                        )}
+                <div className="text-[10px] text-white/20 font-mono mb-2">AI Video Preview — rendering in real-time</div>
+                <div className="relative flex-1 rounded-xl border border-white/[0.06] bg-[#0a0a14] overflow-hidden mb-3 min-h-[200px] flex items-center justify-center">
+                  {videoRecording ? (
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="flex gap-1">
+                        <span className="h-2 w-2 rounded-full bg-red-400 animate-pulse" />
+                        <span className="h-2 w-2 rounded-full bg-red-400 animate-pulse" style={{ animationDelay: '0.3s' }} />
+                        <span className="h-2 w-2 rounded-full bg-red-400 animate-pulse" style={{ animationDelay: '0.6s' }} />
                       </div>
-                    ))}
-                  </div>
+                      <span className="text-[10px] text-white/30 font-mono">Rendering video with AI narration...</span>
+                    </div>
+                  ) : videoPreviewUrl ? (
+                    <video src={videoPreviewUrl} controls className="w-full h-full rounded-lg" />
+                  ) : (
+                    <div className="text-center p-6">
+                      <Video className="h-10 w-10 text-cyan-400/30 mx-auto mb-2" />
+                      <p className="text-xs text-white/30">Click Generate Video to create your AI research video</p>
+                    </div>
+                  )}
+                  <canvas ref={videoCanvasRef} className="hidden" />
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={recordVideo} disabled={videoRecording || !videoScript}
-                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 disabled:opacity-30 transition-all">
-                    {videoRecording ? <><span className="h-3 w-3 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" /> Recording...</> : <><Video className="h-3 w-3" /> Record</>}
+                  <button onClick={generateVideo} disabled={videoRecording || !videoScript}
+                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-indigo-500 text-white hover:opacity-90 disabled:opacity-30 transition-all shadow-lg shadow-cyan-500/20">
+                    {videoRecording ? <><span className="h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin" /> Rendering...</> : <><Video className="h-3 w-3" /> Generate Video</>}
                   </button>
                   {videoPreviewUrl && (
                     <button onClick={downloadVideo}
                       className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-all">
-                      <Download className="h-3 w-3" /> Download
+                      <Download className="h-3 w-3" /> Download .webm
                     </button>
                   )}
                   <button onClick={() => { setVideoScript(null); setVideoPreviewUrl(null); }}
@@ -1563,8 +1634,8 @@ export default function ChatPage() {
                   </button>
                 </div>
                 {videoPreviewUrl && (
-                  <div className="mt-2">
-                    <video src={videoPreviewUrl} controls className="w-full rounded-lg max-h-32" />
+                  <div className="mt-2 text-[9px] text-white/15 font-mono text-center">
+                    Video rendered with AI narration via SpeechSynthesis
                   </div>
                 )}
               </div>
