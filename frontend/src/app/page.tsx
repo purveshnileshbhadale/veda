@@ -302,6 +302,16 @@ export default function ChatPage() {
   const [msgSearch, setMsgSearch] = useState('');
   const [showMsgSearch, setShowMsgSearch] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
+  const [showVideoGen, setShowVideoGen] = useState(false);
+  const [videoTitle, setVideoTitle] = useState('');
+  const [videoAuthors, setVideoAuthors] = useState('');
+  const [videoAbstract, setVideoAbstract] = useState('');
+  const [videoFindings, setVideoFindings] = useState('');
+  const [videoConclusion, setVideoConclusion] = useState('');
+  const [videoScript, setVideoScript] = useState<any>(null);
+  const [videoGenerating, setVideoGenerating] = useState(false);
+  const [videoRecording, setVideoRecording] = useState(false);
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
   const addToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, message, type }]);
@@ -663,6 +673,63 @@ export default function ChatPage() {
     setGenerateTopic('');
   };
 
+  const generateVideoScript = async () => {
+    if (!videoTitle.trim()) return;
+    const t = await ensureToken();
+    if (!t) return;
+    setVideoGenerating(true);
+    setVideoScript(null);
+    try {
+      const r = await fetch(`${API}/ai/generate-video-script`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` },
+        body: JSON.stringify({ title: videoTitle, authors: videoAuthors, abstract: videoAbstract, findings: videoFindings, conclusion: videoConclusion, api_key: gk, provider }),
+      });
+      if (r.ok) { const d = await r.json(); setVideoScript(d.script); }
+      else { addToast('Failed to generate script', 'error'); }
+    } catch { addToast('Failed to generate script', 'error'); }
+    setVideoGenerating(false);
+  };
+
+  const videoPreviewRef = useRef<HTMLDivElement>(null);
+
+  const recordVideo = async () => {
+    const el = videoPreviewRef.current;
+    if (!el || !videoScript) return;
+    setVideoRecording(true);
+    try {
+      const stream = await (navigator.mediaDevices as any).getDisplayMedia({ video: { cursor: 'never' }, audio: false });
+      const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+      const chunks: BlobPart[] = [];
+      recorder.ondataavailable = e => chunks.push(e.data);
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        setVideoPreviewUrl(url);
+        stream.getTracks().forEach((t: MediaStreamTrack) => t.stop());
+      };
+      recorder.start();
+      // Play through slides
+      const slides = videoScript.slides || [];
+      for (let i = 0; i < slides.length; i++) {
+        el.style.transform = `translateX(-${i * 100}%)`;
+        await new Promise(r => setTimeout(r, 6000));
+      }
+      recorder.stop();
+    } catch {
+      setVideoRecording(false);
+      addToast('Recording cancelled or failed', 'error');
+    }
+    setVideoRecording(false);
+  };
+
+  const downloadVideo = () => {
+    if (!videoPreviewUrl) return;
+    const a = document.createElement('a');
+    a.href = videoPreviewUrl;
+    a.download = `${videoTitle.slice(0, 40).replace(/[^a-zA-Z0-9]/g, '_')}_video.webm`;
+    a.click();
+  };
+
   const findMUNDoc = async () => {
     const topic = findTopic.trim();
     if (!topic || findLoading) return;
@@ -896,6 +963,11 @@ export default function ChatPage() {
               className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-emerald-400 px-2 py-1 rounded-lg hover:bg-white/[0.03] hover-lift transition-all">
               <FileDown className="h-3 w-3" />
               <span className="hidden sm:inline">Paper</span>
+            </button>
+            <button onClick={() => setShowVideoGen(true)}
+              className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-cyan-400 px-2 py-1 rounded-lg hover:bg-white/[0.03] hover-lift transition-all">
+              <Video className="h-3 w-3" />
+              <span className="hidden sm:inline">Video</span>
             </button>
             {active && active.messages.length > 0 && (
               <>
@@ -1380,6 +1452,121 @@ export default function ChatPage() {
                   className="mt-3 flex items-center gap-1.5 text-[10px] text-white/30 hover:text-white/60 px-2 py-1 rounded-lg hover:bg-white/[0.03] transition-colors">
                   <Copy className="h-3 w-3" /> Copy
                 </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Video Generator Modal */}
+      {showVideoGen && (
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
+          <div className="fixed inset-0 modal-backdrop" onClick={() => { if (!videoRecording) { setShowVideoGen(false); setVideoScript(null); setVideoPreviewUrl(null); } }} />
+          <div className="relative w-full md:max-w-2xl rounded-t-2xl md:rounded-2xl border border-white/[0.08] glass-premium shadow-2xl p-4 md:p-5 md:mx-4 max-h-[85vh] flex flex-col neon-glow animate-scaleIn">
+            <div className="flex items-center justify-between mb-3 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-cyan-500/20">
+                  <Video className="h-4 w-4 text-cyan-400" />
+                </div>
+                <h2 className="text-sm font-medium text-white/70">Research Video Generator</h2>
+              </div>
+              <button onClick={() => { if (!videoRecording) { setShowVideoGen(false); setVideoScript(null); setVideoPreviewUrl(null); } }} className="text-white/20 hover:text-white/50 transition-colors">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            {!videoScript ? (
+              <div className="space-y-3 overflow-y-auto scrollbar-thin flex-1 pr-1">
+                <div>
+                  <label className="text-[10px] text-white/30 font-mono mb-1 block">Paper Title *</label>
+                  <input value={videoTitle} onChange={e => setVideoTitle(e.target.value)} placeholder="e.g. Quantum Machine Learning for Drug Discovery"
+                    className="w-full h-9 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 text-xs text-white/70 outline-none focus:border-cyan-500/30 transition-colors placeholder:text-white/15" />
+                </div>
+                <div>
+                  <label className="text-[10px] text-white/30 font-mono mb-1 block">Authors</label>
+                  <input value={videoAuthors} onChange={e => setVideoAuthors(e.target.value)} placeholder="e.g. Smith, J., Patel, R."
+                    className="w-full h-9 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 text-xs text-white/70 outline-none focus:border-cyan-500/30 transition-colors placeholder:text-white/15" />
+                </div>
+                <div>
+                  <label className="text-[10px] text-white/30 font-mono mb-1 block">Abstract</label>
+                  <textarea value={videoAbstract} onChange={e => setVideoAbstract(e.target.value)} placeholder="Paste the abstract..."
+                    className="w-full h-20 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-xs text-white/70 outline-none focus:border-cyan-500/30 transition-colors placeholder:text-white/15 resize-none" />
+                </div>
+                <div>
+                  <label className="text-[10px] text-white/30 font-mono mb-1 block">Key Findings</label>
+                  <textarea value={videoFindings} onChange={e => setVideoFindings(e.target.value)} placeholder="List the main findings..."
+                    className="w-full h-20 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-xs text-white/70 outline-none focus:border-cyan-500/30 transition-colors placeholder:text-white/15 resize-none" />
+                </div>
+                <div>
+                  <label className="text-[10px] text-white/30 font-mono mb-1 block">Conclusion</label>
+                  <textarea value={videoConclusion} onChange={e => setVideoConclusion(e.target.value)} placeholder="Key takeaways..."
+                    className="w-full h-16 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-xs text-white/70 outline-none focus:border-cyan-500/30 transition-colors placeholder:text-white/15 resize-none" />
+                </div>
+                <button onClick={generateVideoScript} disabled={!videoTitle.trim() || videoGenerating}
+                  className="w-full h-9 rounded-lg bg-gradient-to-r from-cyan-500 to-indigo-500 text-white text-xs font-medium hover:opacity-90 disabled:opacity-20 transition-all flex items-center justify-center gap-2">
+                  {videoGenerating ? <><span className="h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin" /> Generating Script...</> : <><Video className="h-3.5 w-3.5" /> Generate Video Script</>}
+                </button>
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col min-h-0">
+                <div className="text-[10px] text-white/20 font-mono mb-2">Preview — share your screen when recording</div>
+                <div className="relative flex-1 rounded-xl border border-white/[0.06] bg-[#0a0a14] overflow-hidden mb-3 min-h-[200px]">
+                  <div ref={videoPreviewRef} className="flex h-full transition-transform duration-700 ease-in-out" style={{ transform: 'translateX(0%)' }}>
+                    {(videoScript.slides || []).map((slide: any, idx: number) => (
+                      <div key={idx} className="min-w-full h-full flex flex-col items-center justify-center p-6 md:p-10">
+                        {slide.type === 'title' ? (
+                          <div className="text-center">
+                            <div className="flex h-12 w-12 mx-auto mb-4 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-indigo-500 shadow-lg">
+                              <Video className="h-6 w-6 text-white" />
+                            </div>
+                            <h2 className="text-lg md:text-xl font-bold text-white/90 mb-2">{slide.heading}</h2>
+                            {slide.subheading && <p className="text-xs text-white/40">{slide.subheading}</p>}
+                          </div>
+                        ) : (
+                          <div className="w-full">
+                            <div className="flex items-center gap-2 mb-4">
+                              <div className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
+                              <h3 className="text-sm md:text-base font-semibold text-white/80">{slide.heading}</h3>
+                            </div>
+                            <ul className="space-y-2">
+                              {(slide.bullets || []).map((b: string, bi: number) => (
+                                <li key={bi} className="flex items-start gap-2 text-xs md:text-sm text-white/60 leading-relaxed">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-indigo-400/50 mt-1.5 shrink-0" />
+                                  {b}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {slide.narration && (
+                          <div className="mt-auto pt-4 text-[10px] text-white/20 italic border-t border-white/[0.04] w-full text-center">
+                            "{slide.narration}"
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={recordVideo} disabled={videoRecording || !videoScript}
+                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 disabled:opacity-30 transition-all">
+                    {videoRecording ? <><span className="h-3 w-3 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" /> Recording...</> : <><Video className="h-3 w-3" /> Record</>}
+                  </button>
+                  {videoPreviewUrl && (
+                    <button onClick={downloadVideo}
+                      className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-all">
+                      <Download className="h-3 w-3" /> Download
+                    </button>
+                  )}
+                  <button onClick={() => { setVideoScript(null); setVideoPreviewUrl(null); }}
+                    className="text-xs px-3 py-1.5 rounded-lg border border-white/[0.06] text-white/30 hover:text-white/60 transition-all ml-auto">
+                    Edit Content
+                  </button>
+                </div>
+                {videoPreviewUrl && (
+                  <div className="mt-2">
+                    <video src={videoPreviewUrl} controls className="w-full rounded-lg max-h-32" />
+                  </div>
+                )}
               </div>
             )}
           </div>

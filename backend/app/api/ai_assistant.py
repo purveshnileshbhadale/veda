@@ -377,3 +377,71 @@ ALWAYS ground your response in real facts. If you reference specific documents, 
         {"role": "user", "content": user_prompt},
     ])
     return {"result": result}
+
+class GenerateVideoScriptRequest(BaseModel):
+    title: str
+    authors: str = ""
+    abstract: str = ""
+    findings: str = ""
+    conclusion: str = ""
+    api_key: Optional[str] = None
+    provider: Optional[str] = None
+
+@router.post("/generate-video-script")
+async def generate_video_script(body: GenerateVideoScriptRequest, current_user: User = Depends(get_current_user)):
+    system = """You are VEDA-Video, an expert at creating narrated research video scripts.
+Given a research paper's details, produce a structured JSON script for a 60-90 second animated research summary video.
+
+Return ONLY valid JSON with this exact structure:
+{
+  "slides": [
+    {
+      "type": "title",
+      "heading": "Paper Title",
+      "subheading": "Authors",
+      "narration": "Narrator script for this slide (1-2 sentences)"
+    },
+    {
+      "type": "abstract",
+      "heading": "Overview",
+      "bullets": ["bullet point 1", "bullet point 2", "bullet point 3"],
+      "narration": "Narrator script for this slide"
+    },
+    {
+      "type": "findings",
+      "heading": "Key Findings",
+      "bullets": ["finding 1", "finding 2", "finding 3", "finding 4"],
+      "narration": "Narrator script for this slide"
+    },
+    {
+      "type": "conclusion",
+      "heading": "Conclusion & Impact",
+      "bullets": ["conclusion point 1", "conclusion point 2"],
+      "narration": "Narrator script for this slide"
+    }
+  ]
+}
+
+Keep narration concise (1-2 sentences per slide). Use clear, professional language suitable for academic narration. Each slide should have 2-4 bullets maximum. Make the video script flow naturally from introduction to conclusion."""
+
+    content = f"Title: {body.title}\nAuthors: {body.authors}\nAbstract: {body.abstract}\nKey Findings: {body.findings}\nConclusion: {body.conclusion}"
+    client = AIClient(api_key=body.api_key)
+    result = await client.chat([
+        {"role": "system", "content": system},
+        {"role": "user", "content": content},
+    ])
+    # Try to parse JSON from result
+    import re, json
+    json_match = re.search(r'\{.*\}', result, re.DOTALL)
+    if json_match:
+        try:
+            parsed = json.loads(json_match.group())
+            return {"script": parsed}
+        except:
+            pass
+    return {"script": {"slides": [
+        {"type": "title", "heading": body.title, "subheading": body.authors, "narration": "In this research, we explore an important topic."},
+        {"type": "abstract", "heading": "Overview", "bullets": [body.abstract[:100] + "..."], "narration": "This study addresses key questions in the field."},
+        {"type": "findings", "heading": "Key Findings", "bullets": [body.findings[:100] + "..."], "narration": "Our findings reveal significant insights."},
+        {"type": "conclusion", "heading": "Conclusion", "bullets": [body.conclusion[:100] + "..."], "narration": "This work has important implications for future research."}
+    ]}}
