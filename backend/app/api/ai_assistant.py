@@ -445,3 +445,71 @@ Keep narration concise (1-2 sentences per slide). Use clear, professional langua
         {"type": "findings", "heading": "Key Findings", "bullets": [body.findings[:100] + "..."], "narration": "Our findings reveal significant insights."},
         {"type": "conclusion", "heading": "Conclusion", "bullets": [body.conclusion[:100] + "..."], "narration": "This work has important implications for future research."}
     ]}}
+
+class GeneratePresentationRequest(BaseModel):
+    title: str
+    authors: str = ""
+    pres_type: str = "research"  # research or mun
+    topic: str = ""
+    key_points: str = ""
+    api_key: Optional[str] = None
+    provider: Optional[str] = None
+
+@router.post("/generate-presentation")
+async def generate_presentation(body: GeneratePresentationRequest, current_user: User = Depends(get_current_user)):
+    system = f"""You are VEDA-Present, an expert at creating structured presentation content.
+Given research paper or MUN details, produce a JSON array of slides for a presentation.
+
+Return ONLY valid JSON — an array of slide objects:
+
+For RESEARCH presentations, use these slide types in order:
+1. {{"type":"title","heading":"Paper Title","subheading":"Authors — Conference/Journal"}}
+2. {{"type":"section","heading":"Introduction","subheading":"Background & Motivation"}}
+3. {{"type":"content","heading":"Research Question","bullets":["bullet1","bullet2","bullet3"]}}
+4. {{"type":"content","heading":"Methodology","bullets":["bullet1","bullet2","bullet3"]}}
+5. {{"type":"content","heading":"Key Findings","accent":"emerald","bullets":["bullet1","bullet2","bullet3","bullet4"]}}
+6. {{"type":"content","heading":"Results","bullets":["bullet1","bullet2"]}}
+7. {{"type":"quote","text":"A key quote or takeaway","attribution":"Author, Year"}}
+8. {{"type":"content","heading":"Conclusion","accent":"cyan","bullets":["bullet1","bullet2","bullet3"]}}
+9. {{"type":"section","heading":"Thank You","subheading":"Questions? — Contact: email@institution.edu"}}
+
+For MUN presentations, use:
+1. {{"type":"title","heading":"Committee: Committee Name","subheading":"Country — Delegate Name"}}
+2. {{"type":"content","heading":"Country Position","bullets":["bullet1","bullet2","bullet3"]}}
+3. {{"type":"content","heading":"Key Arguments","accent":"emerald","bullets":["bullet1","bullet2","bullet3"]}}
+4. {{"type":"content","heading":"Proposed Solutions","accent":"cyan","bullets":["bullet1","bullet2","bullet3"]}}
+5. {{"type":"quote","text":"A relevant UN charter article or quote","attribution":"Source"}}
+6. {{"type":"section","heading":"Thank You","subheading":"Open for Caucusing"}}
+
+Generate 6-10 slides. Keep bullets concise (5-10 words each). Use formal academic language."""
+
+    content = f"Title: {body.title}\nAuthors: {body.authors}\nType: {body.pres_type}\nTopic: {body.topic}\nKey Points: {body.key_points}"
+    client = AIClient(api_key=body.api_key)
+    result = await client.chat([
+        {"role": "system", "content": system},
+        {"role": "user", "content": content},
+    ])
+
+    import re, json
+    json_match = re.search(r'\[.*\]', result, re.DOTALL)
+    slides_data = []
+    if json_match:
+        try: slides_data = json.loads(json_match.group())
+        except: pass
+    if not slides_data:
+        slides_data = [
+            {"type":"title","heading":body.title,"subheading":body.authors or "Research Presentation"},
+            {"type":"content","heading":"Overview","bullets":["Key research question identified","Systematic methodology applied","Significant findings obtained"]},
+            {"type":"content","heading":"Key Results","accent":"emerald","bullets":["Primary outcome demonstrates clear effect","Secondary analysis supports main findings","Statistical significance achieved"]},
+            {"type":"section","heading":"Thank You","subheading":"Questions & Discussion"}
+        ]
+
+    from app.services.pptx_service import build_pptx
+    pptx_bytes = build_pptx(slides_data)
+    from fastapi.responses import Response
+    safe = body.title.replace(" ", "_")[:50]
+    return Response(
+        content=pptx_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        headers={"Content-Disposition": f"attachment; filename={safe}.pptx"}
+    )

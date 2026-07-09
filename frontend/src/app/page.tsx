@@ -312,6 +312,13 @@ export default function ChatPage() {
   const [videoGenerating, setVideoGenerating] = useState(false);
   const [videoRecording, setVideoRecording] = useState(false);
   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
+  const [showPpt, setShowPpt] = useState(false);
+  const [pptTitle, setPptTitle] = useState('');
+  const [pptAuthors, setPptAuthors] = useState('');
+  const [pptType, setPptType] = useState<'research' | 'mun'>('research');
+  const [pptTopic, setPptTopic] = useState('');
+  const [pptKeyPoints, setPptKeyPoints] = useState('');
+  const [pptGenerating, setPptGenerating] = useState(false);
   const addToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, message, type }]);
@@ -690,6 +697,29 @@ export default function ChatPage() {
     setVideoGenerating(false);
   };
 
+  const generatePpt = async () => {
+    if (!pptTitle.trim()) return;
+    const t = await ensureToken();
+    if (!t) return;
+    setPptGenerating(true);
+    try {
+      const r = await fetch(`${API}/ai/generate-presentation`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` },
+        body: JSON.stringify({ title: pptTitle, authors: pptAuthors, pres_type: pptType, topic: pptTopic, key_points: pptKeyPoints, api_key: gk, provider }),
+      });
+      if (!r.ok) { addToast('Failed to generate presentation', 'error'); setPptGenerating(false); return; }
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${pptTitle.slice(0, 40).replace(/[^a-zA-Z0-9]/g, '_')}.pptx`;
+      a.click();
+      URL.revokeObjectURL(url);
+      addToast('Presentation downloaded!', 'success');
+    } catch { addToast('Failed to generate presentation', 'error'); }
+    setPptGenerating(false);
+  };
+
   const videoCanvasRef = useRef<HTMLCanvasElement>(null);
 
   const generateVideo = async () => {
@@ -1056,6 +1086,11 @@ export default function ChatPage() {
               className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-cyan-400 px-2 py-1 rounded-lg hover:bg-white/[0.03] hover-lift transition-all">
               <Video className="h-3 w-3" />
               <span className="hidden sm:inline">Video</span>
+            </button>
+            <button onClick={() => setShowPpt(true)}
+              className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-indigo-400 px-2 py-1 rounded-lg hover:bg-white/[0.03] hover-lift transition-all">
+              <FileText className="h-3 w-3" />
+              <span className="hidden sm:inline">PPT</span>
             </button>
             {active && active.messages.length > 0 && (
               <>
@@ -1542,6 +1577,67 @@ export default function ChatPage() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* PPT Generator Modal */}
+      {showPpt && (
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
+          <div className="fixed inset-0 modal-backdrop" onClick={() => { if (!pptGenerating) setShowPpt(false); }} />
+          <div className="relative w-full md:max-w-md rounded-t-2xl md:rounded-2xl border border-white/[0.08] glass-premium shadow-2xl p-4 md:p-5 md:mx-4 neon-glow animate-scaleIn">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-500/20">
+                  <FileText className="h-4 w-4 text-indigo-400" />
+                </div>
+                <h2 className="text-sm font-medium text-white/70">PPT Generator</h2>
+              </div>
+              <button onClick={() => { if (!pptGenerating) setShowPpt(false); }} className="text-white/20 hover:text-white/50 transition-colors">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <button onClick={() => setPptType('research')}
+                  className={`flex-1 h-8 rounded-lg text-xs font-medium transition-all ${pptType === 'research' ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30' : 'bg-white/[0.03] text-white/30 border border-white/[0.06] hover:text-white/50'}`}>
+                  Research
+                </button>
+                <button onClick={() => setPptType('mun')}
+                  className={`flex-1 h-8 rounded-lg text-xs font-medium transition-all ${pptType === 'mun' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-white/[0.03] text-white/30 border border-white/[0.06] hover:text-white/50'}`}>
+                  MUN
+                </button>
+              </div>
+              <div>
+                <label className="text-[10px] text-white/30 font-mono mb-1 block">Title *</label>
+                <input value={pptTitle} onChange={e => setPptTitle(e.target.value)}
+                  placeholder={pptType === 'mun' ? "e.g. UNSC: Reform of the Security Council" : "e.g. Quantum Machine Learning for Drug Discovery"}
+                  className="w-full h-9 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 text-xs text-white/70 outline-none focus:border-indigo-500/30 transition-colors placeholder:text-white/15" />
+              </div>
+              <div>
+                <label className="text-[10px] text-white/30 font-mono mb-1 block">{pptType === 'mun' ? 'Country — Delegate Name' : 'Authors'}</label>
+                <input value={pptAuthors} onChange={e => setPptAuthors(e.target.value)}
+                  placeholder={pptType === 'mun' ? "e.g. France — John Smith" : "e.g. Smith, J., Patel, R."}
+                  className="w-full h-9 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 text-xs text-white/70 outline-none focus:border-indigo-500/30 transition-colors placeholder:text-white/15" />
+              </div>
+              <div>
+                <label className="text-[10px] text-white/30 font-mono mb-1 block">Topic / Committee</label>
+                <input value={pptTopic} onChange={e => setPptTopic(e.target.value)}
+                  placeholder={pptType === 'mun' ? "e.g. UN Security Council" : "e.g. Computational Biology"}
+                  className="w-full h-9 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 text-xs text-white/70 outline-none focus:border-indigo-500/30 transition-colors placeholder:text-white/15" />
+              </div>
+              <div>
+                <label className="text-[10px] text-white/30 font-mono mb-1 block">Key Points</label>
+                <textarea value={pptKeyPoints} onChange={e => setPptKeyPoints(e.target.value)}
+                  placeholder="Main arguments, findings, or policy positions..."
+                  className="w-full h-20 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-xs text-white/70 outline-none focus:border-indigo-500/30 transition-colors placeholder:text-white/15 resize-none" />
+              </div>
+              <button onClick={generatePpt} disabled={!pptTitle.trim() || pptGenerating}
+                className="w-full h-9 rounded-lg bg-gradient-to-r from-indigo-500 to-cyan-400 text-white text-xs font-medium hover:opacity-90 disabled:opacity-20 transition-all flex items-center justify-center gap-2">
+                {pptGenerating ? <><span className="h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin" /> Generating...</> : <><FileText className="h-3.5 w-3.5" /> Generate PPT</>}
+              </button>
+              <p className="text-[9px] text-white/12 text-center font-mono">AI generates 6-10 styled slides with gradients, bullets, and quotes</p>
+            </div>
           </div>
         </div>
       )}
