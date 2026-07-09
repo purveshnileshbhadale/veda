@@ -251,7 +251,7 @@ function Toast({ message, type, onClose }: { message: string; type: 'success' | 
   useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, []);
   const colors = { success: 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300', error: 'bg-red-500/15 border-red-500/30 text-red-300', info: 'bg-blue-500/15 border-blue-500/30 text-blue-300' };
   return (
-    <div className={`fixed bottom-20 left-1/2 -translate-x-1/2 z-[200] px-4 py-2 rounded-xl border backdrop-blur-sm text-xs font-medium ${colors[type]} shadow-lg animate-[fadeInUp_0.3s_ease-out]`}>
+    <div className={`fixed bottom-20 left-1/2 -translate-x-1/2 z-[200] px-4 py-2 rounded-xl border backdrop-blur-sm text-xs font-medium ${colors[type]} shadow-lg toast-enter`}>
       {message}
     </div>
   );
@@ -895,7 +895,7 @@ export default function ChatPage() {
           <div className="absolute top-1/2 right-1/3 w-48 h-48 bg-rose-500/3 rounded-full blur-3xl animate-float" style={{ animationDelay: '-6s' }} />
           <div className="absolute bottom-1/4 right-1/4 w-32 h-32 bg-amber-500/2 rounded-full blur-3xl animate-float" style={{ animationDelay: '-8s' }} />
         </div>
-        <div className="watermark">VEDA</div>
+        <div className="watermark watermark-glow">VEDA</div>
 
       {/* Toasts */}
       {toasts.map(t => <Toast key={t.id} message={t.message} type={t.type} onClose={() => setToasts(prev => prev.filter(x => x.id !== t.id))} />)}
@@ -912,7 +912,7 @@ export default function ChatPage() {
       <aside className={`hidden md:flex flex-col ${showSidebar ? 'w-64' : 'w-0 overflow-hidden'} border-r border-white/[0.03] glass-premium bg-[#0a0a14]/60 shrink-0 transition-all duration-300 relative z-10 animate-slideInLeft scrollbar-gradient border-rotate`}>
         <div className="p-3">
           <button onClick={newChat}
-            className="flex w-full items-center gap-2 rounded-xl border border-white/[0.06] px-3 py-2.5 text-sm text-white/60 hover:text-white hover:border-white/[0.12] hover:bg-white/[0.03] hover-lift transition-all ripple-click">
+            className="flex w-full items-center gap-2 rounded-xl border border-white/[0.06] px-3 py-2.5 text-sm text-white/60 hover:text-white hover:border-white/[0.12] hover:bg-white/[0.03] hover-lift transition-all ripple-click btn-3d">
             <Plus className="h-4 w-4" />
             New chat
           </button>
@@ -945,24 +945,24 @@ export default function ChatPage() {
         </div>
         <div className="p-3 border-t border-white/[0.03] space-y-0.5">
           <button onClick={() => router.push('/profile')}
-            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.03] hover-lift transition-all">
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.03] hover-lift transition-all icon-spin-hover">
             <User className="h-3.5 w-3.5" />
             Profile
           </button>
           <button onClick={() => router.push('/developer')}
-            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.03] hover-lift transition-all">
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.03] hover-lift transition-all icon-spin-hover">
             <Terminal className="h-3.5 w-3.5" />
             Developer
           </button>
           {user?.role === 'admin' && (
             <button onClick={() => router.push('/admin')}
-              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.03] hover-lift transition-all">
+              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.03] hover-lift transition-all icon-spin-hover">
               <Shield className="h-3.5 w-3.5" />
               Admin
             </button>
           )}
           <button onClick={() => setShowSettings(true)}
-            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.03] hover-lift transition-all">
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/[0.03] hover-lift transition-all icon-spin-hover">
             <Settings className="h-3.5 w-3.5" />
             Settings
           </button>
@@ -1050,10 +1050,10 @@ export default function ChatPage() {
         {/* Header */}
         <header className="flex items-center justify-between px-4 h-11 border-b border-white/[0.03] shrink-0 bg-[#07070f]/80 glass-light relative z-10 header-bar">
           <div className="flex items-center gap-2 min-w-0">
-            <button onClick={() => setShowSidebar(!showSidebar)} className="text-white/30 hover:text-white/60 transition-colors shrink-0 hover-lift">
+            <button onClick={() => setShowSidebar(!showSidebar)} className="text-white/30 hover:text-white/60 transition-colors shrink-0 hover-lift icon-spin-hover">
               <PanelLeft className="h-4 w-4" />
             </button>
-            <span className="text-[11px] font-mono font-bold bg-gradient-to-r from-indigo-300 via-cyan-300 to-emerald-300 bg-clip-text text-transparent neon-text hologram">VEDA</span>
+            <span className="text-[11px] font-mono font-bold bg-gradient-to-r from-indigo-300 via-cyan-300 to-emerald-300 bg-clip-text text-transparent neon-text hologram neon-flicker">VEDA</span>
             {active && (
               <span className="text-[11px] text-white/30 truncate ml-1 hidden sm:inline font-mono">/ {active.title}</span>
             )}
@@ -1128,7 +1128,7 @@ export default function ChatPage() {
         </header>
 
         {/* Mode Bar */}
-        <div className="flex items-center gap-1.5 px-3 py-2 border-b border-white/[0.03] bg-[#090914]/60 glass-light overflow-x-auto scrollbar-thin shrink-0 relative z-10">
+        <div className="flex items-center gap-1.5 px-3 py-2 border-b border-white/[0.03] bg-[#090914]/60 glass-light overflow-x-auto scrollbar-thin shrink-0 relative z-10 mode-shimmer">
           <span className="text-[10px] text-white/15 font-mono mr-1 shrink-0 uppercase tracking-widest">Mode</span>
           {modes.map(m => (
             <button key={m.id} onClick={() => setMode(m.id)}
@@ -1166,7 +1166,7 @@ export default function ChatPage() {
                 }`}>
                   {modes.find(m => m.id === mode)?.icon || <Sparkles className="h-7 w-7 md:h-8 md:w-8 text-white" />}
                 </div>
-                <h1 className="text-xl md:text-2xl font-semibold text-white/85 mb-1.5">{modes.find(m => m.id === mode)?.label || 'How can I help?'}</h1>
+                <h1 className="text-xl md:text-2xl font-semibold text-white/85 mb-1.5 bg-gradient-to-r from-white/90 via-cyan-300 to-indigo-300 bg-clip-text text-transparent text-gradient-sweep">{modes.find(m => m.id === mode)?.label || 'How can I help?'}</h1>
                 <p className="text-xs md:text-sm text-white/35 mb-6 md:mb-8 max-w-md leading-relaxed">
                   {modes.find(m => m.id === mode)?.desc || 'Research paper writing assistant'}
                 </p>
@@ -1276,7 +1276,7 @@ export default function ChatPage() {
                           )}
                         </div>
                       ) : (
-                        <div className="text-sm leading-relaxed text-white/70 [&_a]:text-cyan-400 [&_a:hover]:text-cyan-300 [&_a]:underline [&_a]:underline-offset-2 [&_a]:decoration-white/10 [&_strong]:text-white/85 [&_code]:bg-white/[0.06] [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_code]:font-mono [&_pre_code]:bg-transparent [&_pre_code]:p-0 gradient-reveal">
+                        <div className="text-sm leading-relaxed text-white/70 [&_a]:text-cyan-400 [&_a:hover]:text-cyan-300 [&_a]:underline [&_a]:underline-offset-2 [&_a]:decoration-white/10 [&_strong]:text-white/85 [&_code]:bg-white/[0.06] [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_code]:font-mono [&_pre_code]:bg-transparent [&_pre_code]:p-0 gradient-reveal msg-reveal">
                           {msg.content ? md(msg.content) : (
                             streaming && i === messages.length - 1 ? (
                     <span className="inline-flex gap-1.5">
@@ -1363,7 +1363,7 @@ export default function ChatPage() {
         </div>
 
         {/* Input */}
-        <div className="border-t border-white/[0.02] bg-[#07070f] shrink-0 relative z-10">
+        <div className="border-t border-white/[0.02] bg-[#07070f] shrink-0 relative z-10 animate-slideUp">
           <div className="mx-auto w-full md:max-w-3xl px-3 md:px-4 py-2 md:py-3">
             <div className={`flex items-end gap-2 rounded-xl md:rounded-2xl border border-white/[0.06] bg-white/[0.03] px-2 md:px-3 py-2 md:py-3 focus-within:border-indigo-500/30 focus-within:bg-white/[0.05] input-glow input-pulse-glow transition-all shadow-sm shadow-black/10 ${input.trim() ? 'active-content' : ''}`}>
               <label className="shrink-0 cursor-pointer text-white/20 hover:text-white/50 transition-colors p-1">
@@ -1387,7 +1387,7 @@ export default function ChatPage() {
                 </button>
               ) : (
                 <button onClick={handleSend} disabled={!input.trim()}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-400 text-white hover:opacity-90 disabled:opacity-20 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-500/25 neon-glow-intense ripple lightning-hover ripple-click">
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-400 text-white hover:opacity-90 disabled:opacity-20 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-500/25 neon-glow-intense ripple lightning-hover ripple-click btn-3d">
                   <Send className="h-3.5 w-3.5" />
                 </button>
               )}
@@ -1436,7 +1436,7 @@ export default function ChatPage() {
       {showGenerate && (
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
           <div className="fixed inset-0 modal-backdrop" onClick={() => { if (!generating) { setShowGenerate(false); setGenerateTopic(''); } }} />
-          <div className="relative w-full md:max-w-md rounded-t-2xl md:rounded-2xl border border-white/[0.08] glass-premium shadow-2xl p-4 md:p-5 md:mx-4 neon-glow">
+          <div className="relative w-full md:max-w-md rounded-t-2xl md:rounded-2xl border border-white/[0.08] glass-premium shadow-2xl p-4 md:p-5 md:mx-4 neon-glow animate-springIn">
             <div className="flex items-center justify-between mb-3 md:mb-4">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/20">
@@ -1743,7 +1743,7 @@ export default function ChatPage() {
       {/* Auth Modal - blocking full screen */}
       {showAuth && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black">
-          <div className="w-full max-w-sm rounded-2xl border border-white/[0.08] glass-premium shadow-2xl mx-4 p-6 animate-scaleIn">
+          <div className="w-full max-w-sm rounded-2xl border border-white/[0.08] glass-premium shadow-2xl mx-4 p-6 animate-scaleIn breathe-border">
             <div className="flex items-center justify-center mb-5">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-cyan-400 shadow-lg shadow-indigo-500/20">
                 <Sparkles className="h-6 w-6 text-white" />

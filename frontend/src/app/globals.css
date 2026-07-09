@@ -975,3 +975,148 @@ textarea {
 .conv-glow:hover {
   box-shadow: inset 2px 0 0 rgba(99,102,241,0.15);
 }
+
+/* ── Animation Upgrade v3 ── */
+
+/* Neon flicker on VEDA logo */
+@keyframes neonFlicker {
+  0%, 100% { opacity: 1; filter: brightness(1) drop-shadow(0 0 8px rgba(99,102,241,0.3)); }
+  3% { opacity: 0.9; filter: brightness(1.1) drop-shadow(0 0 12px rgba(99,102,241,0.4)); }
+  6% { opacity: 1; filter: brightness(1) drop-shadow(0 0 8px rgba(99,102,241,0.3)); }
+  7% { opacity: 0.95; filter: brightness(1.05); }
+  8% { opacity: 1; }
+  45% { opacity: 1; }
+  48% { opacity: 0.92; filter: brightness(1.08); }
+  50% { opacity: 1; }
+}
+.neon-flicker {
+  animation: neonFlicker 8s ease-in-out infinite;
+}
+
+/* Gradient text sweep on headings */
+@keyframes textGradientSweep {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.text-gradient-sweep {
+  background-size: 200% 200%;
+  animation: textGradientSweep 6s ease infinite;
+}
+
+/* Button 3D press */
+.btn-3d {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transform: perspective(800px) rotateX(0deg);
+}
+.btn-3d:hover {
+  transform: perspective(800px) rotateX(2deg) translateY(-1px);
+}
+.btn-3d:active {
+  transform: perspective(800px) rotateX(4deg) scale(0.97);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+/* Icon spin on hover */
+@keyframes iconSpin { to { transform: rotate(30deg); } }
+.icon-spin-hover:hover svg {
+  animation: iconSpin 0.3s ease-out forwards;
+}
+
+/* Toast slide from right */
+@keyframes toastSlideIn {
+  from { transform: translateX(120%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes toastSlideOut {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(120%); opacity: 0; }
+}
+.toast-enter {
+  animation: toastSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Watermark glow pulse */
+@keyframes watermarkGlow {
+  0%, 100% { opacity: 0.015; filter: blur(0px); }
+  50% { opacity: 0.025; filter: blur(1px); }
+}
+.watermark-glow {
+  animation: watermarkGlow 6s ease-in-out infinite;
+}
+
+/* Modal spring entrance */
+@keyframes springIn {
+  0% { transform: scale(0.9) translateY(20px); opacity: 0; }
+  50% { transform: scale(1.02) translateY(-2px); }
+  70% { transform: scale(0.99) translateY(1px); }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+.animate-springIn {
+  animation: springIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Pulse dot for status */
+@keyframes statusPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(52,211,153,0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(52,211,153,0); }
+}
+.status-dot {
+  animation: statusPulse 2s ease-in-out infinite;
+}
+
+/* Message shimmer reveal on new messages */
+@keyframes msgReveal {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.msg-reveal {
+  position: relative;
+  overflow: hidden;
+}
+.msg-reveal::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(99,102,241,0.04) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: msgReveal 1.5s ease-in-out;
+  pointer-events: none;
+}
+
+/* Breathing border glow on auth card */
+@keyframes breatheBorder {
+  0%, 100% { border-color: rgba(99,102,241,0.1); box-shadow: 0 0 15px rgba(99,102,241,0.03); }
+  50% { border-color: rgba(99,102,241,0.25); box-shadow: 0 0 30px rgba(99,102,241,0.08); }
+}
+.breathe-border {
+  animation: breatheBorder 4s ease-in-out infinite;
+}
+
+/* Shimmer on mode switch */
+@keyframes modeShimmer {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+.mode-shimmer {
+  animation: modeShimmer 0.6s ease-in-out;
+}
+
+/* Slide-up for input area */
+@keyframes slideUp {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.animate-slideUp {
+  animation: slideUp 0.3s ease-out;
+}
+
+/* Smooth pulse on active conversation */
+@keyframes activeConvPulse {
+  0%, 100% { border-color: rgba(99,102,241,0.1); }
+  50% { border-color: rgba(99,102,241,0.2); }
+}
+.active-conv-pulse {
+  animation: activeConvPulse 3s ease-in-out infinite;
+}
