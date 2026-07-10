@@ -748,8 +748,7 @@ export default function ChatPage() {
     canvas.width = W; canvas.height = H;
     const slides = videoScript.slides || [];
     const fps = 30;
-    const secPerSlide = 5;
-    const totalFrames = slides.length * secPerSlide * fps;
+    const secPerSlide = 6;
 
     const stream = canvas.captureStream(fps);
     const recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
@@ -762,83 +761,150 @@ export default function ChatPage() {
     };
     recorder.start();
 
-    // Speak narration while rendering
     let utt: SpeechSynthesisUtterance | null = null;
     const speakSlide = (text: string) => {
       speechSynthesis.cancel();
-      if (text) { utt = new SpeechSynthesisUtterance(text); utt.rate = 0.9; utt.pitch = 1; speechSynthesis.speak(utt); }
+      if (text) { utt = new SpeechSynthesisUtterance(text); utt.rate = 0.85; utt.pitch = 1.05; speechSynthesis.speak(utt); }
+    };
+
+    const particles = Array.from({ length: 30 }, () => ({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - 0.5) * 0.5, vy: (Math.random() - 0.5) * 0.5, r: 1 + Math.random() * 2, o: 0.2 + Math.random() * 0.3 }));
+    const colors = {
+      title: { p: '#818cf8', a: '#34d399', b1: '#0a0a1a', b2: '#0f0f2a' },
+      abstract: { p: '#34d399', a: '#22d3ee', b1: '#0a0a1a', b2: '#0a1a1a' },
+      findings: { p: '#f59e0b', a: '#ef4444', b1: '#0a0a1a', b2: '#1a0f0a' },
+      conclusion: { p: '#a78bfa', a: '#ec4899', b1: '#0a0a1a', b2: '#100a1a' },
     };
 
     for (let si = 0; si < slides.length; si++) {
       const slide = slides[si];
+      const c = (colors as any)[slide.type] || colors.abstract;
       speakSlide(slide.narration || '');
       for (let f = 0; f < secPerSlide * fps; f++) {
-        const t = f / (secPerSlide * fps); // 0→1
+        const t = f / (secPerSlide * fps);
         const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+        const bounce = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
         ctx.clearRect(0, 0, W, H);
-        // Background gradient
-        const grad = ctx.createLinearGradient(0, 0, W, H);
-        grad.addColorStop(0, '#0a0a1a'); grad.addColorStop(0.5, '#0d0d24'); grad.addColorStop(1, '#0a0a1a');
-        ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
-        // Grid dots
-        ctx.fillStyle = 'rgba(99,102,241,0.04)';
-        for (let gx = 0; gx < W; gx += 32) for (let gy = 0; gy < H; gy += 32) { ctx.beginPath(); ctx.arc(gx, gy, 1, 0, Math.PI * 2); ctx.fill(); }
-        // Glow orb
-        const orbGrad = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, 300);
-        orbGrad.addColorStop(0, 'rgba(99,102,241,0.04)'); orbGrad.addColorStop(1, 'transparent');
-        ctx.fillStyle = orbGrad; ctx.fillRect(0, 0, W, H);
+
+        const go = Math.sin(t * Math.PI * 2) * 0.1;
+        const g = ctx.createLinearGradient(0, 0, W * (0.5 + go), H);
+        g.addColorStop(0, c.b1); g.addColorStop(0.5, c.b2); g.addColorStop(1, c.b1);
+        ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+        const gp = (Date.now() * 0.001) % 100;
+        for (let gx = 0; gx < W; gx += 28) for (let gy = 0; gy < H; gy += 28) {
+          const dd = Math.abs(gx - W/2) + Math.abs(gy - H/2);
+          const dg = Math.sin(gp + dd * 0.01) * 0.5 + 0.5;
+          ctx.fillStyle = `rgba(99,102,241,${0.02 + dg * 0.03})`;
+          ctx.beginPath(); ctx.arc(gx, gy, 0.8, 0, Math.PI * 2); ctx.fill();
+        }
+
+        for (const p of particles) {
+          p.x += p.vx; p.y += p.vy;
+          if (p.x < 0 || p.x > W) p.vx *= -1;
+          if (p.y < 0 || p.y > H) p.vy *= -1;
+          const pl = Math.sin(Date.now() * 0.0005 + p.x) * 0.3 + 0.7;
+          ctx.fillStyle = `rgba(255,255,255,${p.o * pl * 0.3})`;
+          ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+        }
+
+        const op = Math.sin(t * Math.PI * 4) * 0.3 + 0.7;
+        const og = ctx.createRadialGradient(W/2, H/2, 50, W/2, H/2, 350);
+        og.addColorStop(0, c.p + `22`); og.addColorStop(0.5, `rgba(99,102,241,${0.02 * op})`); og.addColorStop(1, 'transparent');
+        ctx.fillStyle = og; ctx.fillRect(0, 0, W, H);
+
+        const vg = ctx.createRadialGradient(W/2, H/2, H*0.3, W/2, H/2, H*0.8);
+        vg.addColorStop(0, 'transparent'); vg.addColorStop(1, 'rgba(0,0,0,0.4)');
+        ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+
+        ctx.fillStyle = 'rgba(255,255,255,0.015)';
+        for (let ys = 0; ys < H; ys += 3) ctx.fillRect(0, ys, W, 1);
 
         ctx.save();
-        const slideIn = Math.min(ease * 1.5, 1);
-        ctx.globalAlpha = slideIn;
-        const sy = (1 - slideIn) * 40;
-        ctx.translate(0, sy);
+        const si2 = Math.min(ease * 2, 1);
+        ctx.globalAlpha = si2;
+        const sy2 = (1 - bounce) * 30;
+        ctx.translate(0, sy2);
+
+        ctx.strokeStyle = c.p; ctx.lineWidth = 1.5;
+        ctx.globalAlpha = 0.25 * si2;
+        const cs = 40, cp = 30;
+        ctx.beginPath(); ctx.moveTo(cp, cp+cs); ctx.lineTo(cp, cp); ctx.lineTo(cp+cs, cp); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(W-cp-cs, cp); ctx.lineTo(W-cp, cp); ctx.lineTo(W-cp, cp+cs); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cp, H-cp-cs); ctx.lineTo(cp, H-cp); ctx.lineTo(cp+cs, H-cp); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(W-cp-cs, H-cp); ctx.lineTo(W-cp, H-cp); ctx.lineTo(W-cp, H-cp-cs); ctx.stroke();
+        ctx.globalAlpha = si2;
 
         if (slide.type === 'title') {
-          // Icon
-          ctx.shadowColor = 'rgba(99,102,241,0.3)'; ctx.shadowBlur = 30;
-          ctx.fillStyle = '#6366f1'; ctx.beginPath(); ctx.roundRect(W/2-30, 80, 60, 60, 14); ctx.fill();
+          const ra = t * Math.PI * 2 + si * Math.PI * 2;
+          ctx.strokeStyle = c.p; ctx.lineWidth = 2;
+          ctx.globalAlpha = 0.4 * si2;
+          ctx.beginPath(); ctx.arc(W/2, 100, 45, 0, Math.PI * 2); ctx.stroke();
+          ctx.beginPath(); ctx.arc(W/2, 100, 45, ra - 0.5, ra + 0.3); ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
+          ctx.globalAlpha = si2;
+
+          ctx.shadowColor = c.p; ctx.shadowBlur = 40;
+          ctx.fillStyle = c.p; ctx.beginPath(); ctx.roundRect(W/2-24, 76, 48, 48, 12); ctx.fill();
           ctx.shadowBlur = 0;
-          ctx.fillStyle = '#fff'; ctx.font = '28px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('▶', W/2, 120);
-          // Title
-          ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = 'bold 36px sans-serif'; ctx.textAlign = 'center';
-          wrapText(ctx, slide.heading || '', W/2, 200, W-120, 50);
-          // Authors
-          if (slide.subheading) { ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = '20px sans-serif'; ctx.fillText(slide.subheading, W/2, 320); }
-          // Label
-          ctx.fillStyle = 'rgba(99,102,241,0.3)'; ctx.font = '14px monospace'; ctx.fillText('VEDA Research Video', W/2, H-60);
+          ctx.fillStyle = '#fff'; ctx.font = '24px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('◆', W/2, 108);
+
+          ctx.fillStyle = 'rgba(255,255,255,0.95)'; ctx.font = 'bold 40px sans-serif'; ctx.textAlign = 'center';
+          wrapText(ctx, slide.heading || '', W/2, 200, W-140, 52);
+
+          const ulW = Math.min(t * 300, 300);
+          ctx.fillStyle = c.p; ctx.globalAlpha = 0.5 * si2;
+          ctx.fillRect(W/2 - ulW/2, 260, ulW, 3);
+
+          if (slide.subheading) {
+            ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '18px sans-serif'; ctx.fillText(slide.subheading, W/2, 310);
+          }
+          ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.font = '12px monospace'; ctx.textAlign = 'center';
+          ctx.fillText('VEDA • AI Research Video', W/2, H-50);
         } else {
-          // Section heading with accent bar
-          ctx.fillStyle = '#6366f1'; ctx.fillRect(80, 100, 4, 36);
-          ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.font = 'bold 28px sans-serif'; ctx.textAlign = 'left';
-          ctx.fillText(slide.heading || '', 100, 128);
-          // Bullets
+          ctx.fillStyle = c.p; ctx.fillRect(80, 90, 40, 4);
+
+          const hs = Math.min(t * 2, 1);
+          ctx.globalAlpha = si2 * hs;
+          ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = 'bold 30px sans-serif'; ctx.textAlign = 'left';
+          ctx.fillText(slide.heading || '', 80, 142 - (1 - hs) * 20);
+          ctx.globalAlpha = si2;
+
           const bullets = slide.bullets || [];
-          const startY = 180;
-          const lineH = 50;
-          const maxVisible = Math.floor(t * bullets.length * 2);
+          const startY = 190, lineH = 56;
+          const maxVisible = Math.floor(t * bullets.length * 2.5);
           for (let bi = 0; bi < bullets.length; bi++) {
             if (bi > maxVisible) break;
-            const ba = Math.min((t * bullets.length * 2 - bi) * 2, 1);
-            ctx.globalAlpha = ba;
-            ctx.fillStyle = '#22d3ee'; ctx.beginPath(); ctx.arc(110, startY + bi * lineH, 5, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = '18px sans-serif'; ctx.textAlign = 'left';
-            wrapText(ctx, bullets[bi], 130, startY + bi * lineH + 6, W - 200, 24);
+            const bt = Math.max(0, Math.min((t * bullets.length * 2.5 - bi) / 1.5, 1));
+            const bb = bt < 0.5 ? 4 * bt * bt * bt : 1 - Math.pow(-2 * bt + 2, 3) / 2;
+            ctx.globalAlpha = bt;
+            const bsh = (1 - bb) * 25;
+
+            ctx.shadowColor = c.a; ctx.shadowBlur = bt > 0.5 ? 15 : 0;
+            ctx.fillStyle = c.a; ctx.beginPath(); ctx.arc(110, startY + bi * lineH + bsh, 5, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 0;
+
+            ctx.fillStyle = c.a + '33'; ctx.font = '10px monospace'; ctx.textAlign = 'left';
+            ctx.fillText(`${String(bi + 1).padStart(2, '0')}`, 95, startY + bi * lineH + 4 + bsh);
+
+            ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 4;
+            ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.font = '19px sans-serif'; ctx.textAlign = 'left';
+            wrapText(ctx, bullets[bi], 135, startY + bi * lineH + 6 + bsh, W - 210, 26);
+            ctx.shadowBlur = 0;
           }
           ctx.globalAlpha = 1;
         }
         ctx.restore();
 
-        // Progress bar at bottom
         const progress = (si + t) / slides.length;
-        ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fillRect(0, H-4, W, 4);
-        const pgGrad = ctx.createLinearGradient(0, 0, W, 0);
-        pgGrad.addColorStop(0, 'rgba(99,102,241,0.6)'); pgGrad.addColorStop(1, 'rgba(52,211,153,0.4)');
-        ctx.fillStyle = pgGrad; ctx.fillRect(0, H-4, W * progress, 4);
+        ctx.fillStyle = 'rgba(255,255,255,0.04)'; ctx.fillRect(0, H-5, W, 5);
+        const pg = ctx.createLinearGradient(0, 0, W, 0);
+        pg.addColorStop(0, c.p + '99'); pg.addColorStop(1, c.a + '66');
+        ctx.fillStyle = pg; ctx.fillRect(0, H-5, W * progress, 5);
 
-        // Slide indicator
-        ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.font = '12px monospace'; ctx.textAlign = 'center';
-        ctx.fillText(`${si + 1} / ${slides.length}`, W/2, H-16);
+        ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.font = '12px monospace'; ctx.textAlign = 'center';
+        ctx.fillText(`${si + 1} / ${slides.length}`, W/2, H-18);
+
+        ctx.fillStyle = c.p + '33'; ctx.font = '10px monospace'; ctx.textAlign = 'right';
+        ctx.fillText(slide.type.toUpperCase(), W - 30, 30);
 
         await new Promise(r => requestAnimationFrame(r));
       }
