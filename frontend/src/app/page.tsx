@@ -318,6 +318,8 @@ export default function ChatPage() {
   const [showPastSpeeches, setShowPastSpeeches] = useState(false);
   const [savedSpeeches, setSavedSpeeches] = useState<{ id: string; topic: string; country: string; type: string; content: string; date: string }[]>([]);
   const [speechSearch, setSpeechSearch] = useState('');
+  const [videoVoice, setVideoVoice] = useState('');
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const addToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, message, type }]);
@@ -346,6 +348,17 @@ export default function ChatPage() {
     if (savedProvider) setProvider(savedProvider);
     const savedSpeeches = localStorage.getItem('veda_speeches');
     if (savedSpeeches) try { setSavedSpeeches(JSON.parse(savedSpeeches)); } catch {}
+  }, []);
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      const load = () => {
+        const v = speechSynthesis.getVoices();
+        if (v.length) { setVoices(v); if (!videoVoice && v.length) setVideoVoice(v[0].voiceURI); }
+      };
+      load();
+      speechSynthesis.onvoiceschanged = load;
+      return () => { speechSynthesis.onvoiceschanged = null; };
+    }
   }, []);
   const gk = [103,115,107,95,70,67,83,88,50,49,82,106,69,90,110,108,120,108,88,117,52,84,111,85,87,71,100,121,98,51,70,89,100,54,98,111,88,84,55,72,70,74,88,108,121,108,71,102,74,102,53,113,102,84,109,99].map(c => String.fromCharCode(c)).join('');
   const abortRef = useRef<AbortController | null>(null);
@@ -764,7 +777,7 @@ export default function ChatPage() {
     let utt: SpeechSynthesisUtterance | null = null;
     const speakSlide = (text: string) => {
       speechSynthesis.cancel();
-      if (text) { utt = new SpeechSynthesisUtterance(text); utt.rate = 0.85; utt.pitch = 1.05; speechSynthesis.speak(utt); }
+      if (text) { utt = new SpeechSynthesisUtterance(text); utt.rate = 0.85; utt.pitch = 1.05; if (videoVoice) { const v = voices.find(x => x.voiceURI === videoVoice); if (v) utt.voice = v; } speechSynthesis.speak(utt); }
     };
 
     const particles = Array.from({ length: 30 }, () => ({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - 0.5) * 0.5, vy: (Math.random() - 0.5) * 0.5, r: 1 + Math.random() * 2, o: 0.2 + Math.random() * 0.3 }));
@@ -1761,6 +1774,15 @@ export default function ChatPage() {
                   <textarea value={videoTopic} onChange={e => setVideoTopic(e.target.value)} placeholder="e.g. Quantum Machine Learning for Drug Discovery, or Climate Change Adaptation in Coastal Cities"
                     className="w-full h-24 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-xs text-white/70 outline-none focus:border-cyan-500/30 transition-colors placeholder:text-white/15 resize-none" />
                 </div>
+                <div>
+                  <label className="text-[10px] text-white/30 font-mono mb-1 block">Narration Voice</label>
+                  <select value={videoVoice} onChange={e => setVideoVoice(e.target.value)}
+                    className="w-full h-9 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 text-xs text-white/70 outline-none focus:border-cyan-500/30 transition-colors">
+                    {voices.map(v => (
+                      <option key={v.voiceURI} value={v.voiceURI} className="bg-[#0d0d24]">{v.name} ({v.lang})</option>
+                    ))}
+                  </select>
+                </div>
                 <button onClick={generateVideoScript} disabled={!videoTopic.trim() || videoGenerating}
                   className="w-full h-9 rounded-lg bg-gradient-to-r from-cyan-500 to-indigo-500 text-white text-xs font-medium hover:opacity-90 disabled:opacity-20 transition-all flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20">
                   {videoGenerating ? <><span className="h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin" /> Generating...</> : <><Video className="h-3.5 w-3.5" /> Generate Video</>}
@@ -1805,11 +1827,22 @@ export default function ChatPage() {
                     Edit Content
                   </button>
                 </div>
-                {videoPreviewUrl && (
-                  <div className="mt-2 text-[9px] text-white/15 font-mono text-center">
-                    Video rendered with AI narration via SpeechSynthesis
-                  </div>
-                )}
+                <div className="flex items-center justify-between mt-1.5">
+                  {!videoPreviewUrl && (
+                    <div className="flex items-center gap-2">
+                      <label className="text-[9px] text-white/20 font-mono">Voice:</label>
+                      <select value={videoVoice} onChange={e => setVideoVoice(e.target.value)}
+                        className="h-6 rounded-lg border border-white/[0.06] bg-white/[0.03] px-2 text-[9px] text-white/40 outline-none focus:border-cyan-500/30 transition-colors max-w-[200px]">
+                        {voices.map(v => (
+                          <option key={v.voiceURI} value={v.voiceURI} className="bg-[#0d0d24]">{v.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  {videoPreviewUrl && (
+                    <div className="text-[9px] text-white/15 font-mono">Video rendered with {voices.find(v => v.voiceURI === videoVoice)?.name || 'default'} voice</div>
+                  )}
+                </div>
               </div>
             )}
           </div>
