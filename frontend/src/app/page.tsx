@@ -1047,7 +1047,7 @@ export default function ChatPage() {
     const W = 1280, H = 720;
     canvas.width = W; canvas.height = H;
     const scenes = videoScript.scenes || videoScript.slides || [];
-    const fps = 30;
+    const fps = 50;
     const secPerScene = 6;
 
     const stream = canvas.captureStream(fps);
