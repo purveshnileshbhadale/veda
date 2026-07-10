@@ -322,6 +322,8 @@ export default function ChatPage() {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [videoUseCustom, setVideoUseCustom] = useState(false);
   const [videoCustomScript, setVideoCustomScript] = useState('');
+  const [videoSubtitles, setVideoSubtitles] = useState(true);
+  const [videoMusic, setVideoMusic] = useState(false);
   const addToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, message, type }]);
@@ -800,6 +802,57 @@ export default function ChatPage() {
       }
     }
 
+    // ── Example ──
+    else if (scene.type === 'example') {
+      ctx.fillStyle = colorSet.a + '22'; ctx.beginPath(); ctx.roundRect(W/2-35, 70, 70, 70, 18); ctx.fill();
+      ctx.font = '32px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(icons[scene.visual] || '🌐', W/2, 117);
+      ctx.fillStyle = colorSet.p; ctx.fillRect(80, 165, 40, 4);
+      ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'left'; ctx.fillText(scene.heading || '', 80, 210);
+      if (scene.text) {
+        const fadeIn = Math.min((t - 0.2) * 3, 1);
+        ctx.globalAlpha = Math.max(0, fadeIn * s);
+        ctx.fillStyle = colorSet.p + '15'; ctx.beginPath(); ctx.roundRect(70, 250, W - 140, 90, 14); ctx.fill();
+        ctx.strokeStyle = colorSet.a + '30'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.roundRect(70, 250, W - 140, 90, 14); ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.font = '16px sans-serif'; ctx.textAlign = 'center';
+        wrapText(ctx, scene.text, W/2, 290, W - 190, 24);
+      }
+    }
+
+    // ── Quote ──
+    else if (scene.type === 'quote') {
+      ctx.fillStyle = colorSet.a + '22'; ctx.beginPath(); ctx.roundRect(W/2-35, 70, 70, 70, 18); ctx.fill();
+      ctx.font = '32px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(icons[scene.visual] || '📖', W/2, 117);
+      ctx.fillStyle = colorSet.p; ctx.fillRect(80, 165, 40, 4);
+      ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'left'; ctx.fillText(scene.heading || '', 80, 210);
+      if (scene.text) {
+        const fadeIn = Math.min((t - 0.2) * 3, 1);
+        ctx.globalAlpha = Math.max(0, fadeIn * s);
+        // Opening quote mark
+        ctx.fillStyle = colorSet.a + '30'; ctx.font = 'bold 60px serif'; ctx.textAlign = 'left'; ctx.fillText('"', 75, 290);
+        ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.font = 'italic 18px serif'; ctx.textAlign = 'left';
+        wrapText(ctx, scene.text, 100, 280, W - 190, 26);
+      }
+    }
+
+    // ── Quiz ──
+    else if (scene.type === 'quiz') {
+      const pulse = Math.sin(t * Math.PI * 3) * 0.15 + 0.85;
+      ctx.shadowColor = colorSet.a; ctx.shadowBlur = 25 * pulse;
+      ctx.fillStyle = colorSet.a + '22'; ctx.beginPath(); ctx.roundRect(W/2-35, 70, 70, 70, 18); ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.font = '32px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(icons[scene.visual] || '★', W/2, 117);
+      ctx.fillStyle = colorSet.p; ctx.fillRect(80, 165, 40, 4);
+      ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'left'; ctx.fillText(scene.heading || '', 80, 210);
+      if (scene.text) {
+        const fadeIn = Math.min((t - 0.3) * 3, 1);
+        ctx.globalAlpha = Math.max(0, fadeIn * s) * pulse;
+        ctx.fillStyle = colorSet.p + '20'; ctx.beginPath(); ctx.roundRect(W/2-150, 260, 300, 80, 50); ctx.fill();
+        ctx.strokeStyle = colorSet.p + '40'; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(W/2-150, 260, 300, 80, 50); ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.font = '16px sans-serif'; ctx.textAlign = 'center';
+        wrapText(ctx, scene.text, W/2, 300, W - 200, 24);
+      }
+    }
+
     // ── Diagram ──
     else if (scene.type === 'diagram') {
       ctx.fillStyle = colorSet.a + '22'; ctx.beginPath(); ctx.roundRect(W/2-35, 70, 70, 70, 18); ctx.fill();
@@ -1022,9 +1075,49 @@ export default function ChatPage() {
       compare: { p: '#a78bfa', a: '#f472b6', b1: '#0a0a1a', b2: '#100a1a' },
       timeline: { p: '#22d3ee', a: '#818cf8', b1: '#0a0a1a', b2: '#0a1a1a' },
       step: { p: '#f97316', a: '#22d3ee', b1: '#0a0a1a', b2: '#1a0f0a' },
+      example: { p: '#10b981', a: '#f59e0b', b1: '#0a0a1a', b2: '#0a1a0a' },
+      quote: { p: '#f472b6', a: '#818cf8', b1: '#0a0a1a', b2: '#1a0a1a' },
+      quiz: { p: '#f59e0b', a: '#ef4444', b1: '#0a0a1a', b2: '#1a0f0a' },
       concept: { p: '#ec4899', a: '#a78bfa', b1: '#0a0a1a', b2: '#1a0a1a' },
       conclusion: { p: '#34d399', a: '#f59e0b', b1: '#0a0a1a', b2: '#0a1a0a' },
     };
+
+    // Subtle ambient music via AudioContext
+    let audioCtx: AudioContext | null = null;
+    let masterGain: GainNode | null = null;
+    if (videoMusic) {
+      try {
+        audioCtx = new AudioContext();
+        masterGain = audioCtx.createGain();
+        masterGain.gain.value = 0.04;
+        masterGain.connect(audioCtx.destination);
+        const playNote = (freq: number, start: number, dur: number) => {
+          const osc = audioCtx!.createOscillator();
+          const g = audioCtx!.createGain();
+          osc.type = 'sine';
+          osc.frequency.value = freq;
+          g.gain.setValueAtTime(0, start);
+          g.gain.linearRampToValueAtTime(0.06, start + 0.1);
+          g.gain.linearRampToValueAtTime(0, start + dur);
+          osc.connect(g); g.connect(masterGain!);
+          osc.start(start); osc.stop(start + dur);
+        };
+        const now = audioCtx.currentTime;
+        // Ambient pad chords
+        const chords = [[261.63, 329.63, 392.00], [293.66, 349.23, 440.00], [329.63, 392.00, 493.88], [261.63, 311.13, 392.00]];
+        for (let ci = 0; ci < Math.min(scenes.length, 12); ci++) {
+          const chord = chords[ci % chords.length];
+          const st = now + ci * secPerScene;
+          chord.forEach((freq, j) => playNote(freq + j * 0.5, st, secPerScene + 1));
+        }
+        // Soft bass drone
+        const bass = audioCtx!.createOscillator();
+        bass.type = 'sine'; bass.frequency.value = 65.41;
+        const bg = audioCtx!.createGain();
+        bg.gain.value = 0.03; bass.connect(bg); bg.connect(masterGain!);
+        bass.start(); bass.stop(now + scenes.length * secPerScene + 1);
+      } catch {}
+    }
 
     for (let si = 0; si < scenes.length; si++) {
       const scene = scenes[si];
@@ -1082,8 +1175,29 @@ export default function ChatPage() {
         // Scene content
         drawScene(ctx, scene, ease, c, W, H);
 
+        // Crossfade transition from previous scene
+        if (t < 0.15 && si > 0) {
+          const prevScene = scenes[si - 1];
+          const prevC = colorMap[prevScene.type as string] || c;
+          const fadeT = t / 0.15;
+          ctx.globalAlpha = 1 - fadeT;
+          drawScene(ctx, prevScene, 1, prevC, W, H);
+          ctx.globalAlpha = 1;
+        }
+
         // Character
         drawCharacter(ctx, t + si * 0.5, !!scene.narration, W, H);
+
+        // Subtitles
+        if (videoSubtitles && scene.narration) {
+          const subAlpha = Math.min(t * 3, 1) * (t > 0.8 ? Math.max(0, (1 - t) * 5) : 1);
+          ctx.globalAlpha = subAlpha * 0.8;
+          // Subtitle background bar
+          ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.beginPath(); ctx.roundRect(W/2 - 280, H - 80, 560, 40, 8); ctx.fill();
+          ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.font = '15px sans-serif'; ctx.textAlign = 'center';
+          wrapText(ctx, scene.narration, W/2, H - 55, 520, 22);
+          ctx.globalAlpha = 1;
+        }
 
         // Progress
         const progress = (si + t) / scenes.length;
@@ -1101,6 +1215,7 @@ export default function ChatPage() {
       }
     }
     speechSynthesis.cancel();
+    if (audioCtx) try { audioCtx.close(); } catch {}
     recorder.stop();
   };
 
@@ -1988,6 +2103,18 @@ export default function ChatPage() {
                       <option key={v.voiceURI} value={v.voiceURI} className="bg-[#0d0d24]">{v.name} ({v.lang})</option>
                     ))}
                   </select>
+                </div>
+                <div className="flex gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={videoSubtitles} onChange={e => setVideoSubtitles(e.target.checked)}
+                      className="w-3.5 h-3.5 rounded border-white/20 bg-white/5 accent-cyan-500" />
+                    <span className="text-[10px] text-white/30 font-mono">Subtitles</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={videoMusic} onChange={e => setVideoMusic(e.target.checked)}
+                      className="w-3.5 h-3.5 rounded border-white/20 bg-white/5 accent-cyan-500" />
+                    <span className="text-[10px] text-white/30 font-mono">Background Music</span>
+                  </label>
                 </div>
               </div>
             ) : (

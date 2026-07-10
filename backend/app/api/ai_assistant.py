@@ -386,9 +386,9 @@ class GenerateVideoScriptRequest(BaseModel):
 @router.post("/generate-video-script")
 async def generate_video_script(body: GenerateVideoScriptRequest, current_user: User = Depends(get_current_user)):
     system = """You are VEDA-Video, an expert at creating animated educational video scripts.
-Given a research topic, produce a structured JSON script for a 60-90 second animated explainer video with rich visual scenes — NOT just slides.
+Given a research topic, produce a structured JSON script for a 90-120 second animated explainer video with rich visual scenes — each scene is a unique animated visual, NOT just text slides.
 
-Return ONLY valid JSON with this exact structure:
+Return ONLY valid JSON with this exact structure (use ALL scene types below, generate 10-12 scenes total):
 {
   "scenes": [
     {
@@ -396,21 +396,21 @@ Return ONLY valid JSON with this exact structure:
       "heading": "Research Topic Title",
       "subheading": "Animated Explainer",
       "visual": "sparkle",
-      "narration": "Narrator script for this scene (1-2 sentences)"
+      "narration": "Narrator script (1-2 sentences)"
     },
     {
       "type": "explain",
       "heading": "The Core Concept",
       "visual": "lightbulb",
-      "text": "A clear explanation of the main concept in 1-2 sentences.",
-      "narration": "Narrator script for this scene"
+      "text": "Clear explanation of main concept in 1-2 sentences.",
+      "narration": "Narrator script"
     },
     {
       "type": "diagram",
       "heading": "How It Works",
       "visual": "gear",
-      "items": ["Component 1 — brief description", "Component 2 — brief description", "Component 3 — brief description", "Component 4 — brief description"],
-      "narration": "Narrator script for this scene"
+      "items": ["Component 1 — description", "Component 2 — description", "Component 3 — description"],
+      "narration": "Narrator script"
     },
     {
       "type": "compare",
@@ -418,42 +418,63 @@ Return ONLY valid JSON with this exact structure:
       "visual": "balance",
       "left": "Traditional Approach",
       "right": "New Approach",
-      "narration": "Narrator script for this scene"
+      "narration": "Narrator script"
     },
     {
       "type": "timeline",
       "heading": "Evolution & Progress",
       "visual": "clock",
-      "items": ["2018 — Milestone one", "2020 — Milestone two", "2022 — Milestone three", "2024 — Current state"],
-      "narration": "Narrator script for this scene"
+      "items": ["2018 — Milestone", "2020 — Milestone", "2022 — Milestone", "2024 — Current"],
+      "narration": "Narrator script"
     },
     {
       "type": "step",
       "heading": "Step-by-Step Process",
       "visual": "list",
-      "items": ["First, understand the fundamentals", "Then, apply the core methodology", "Next, analyze the results", "Finally, draw conclusions"],
-      "narration": "Narrator script for this scene"
+      "items": ["First step description", "Second step description", "Third step description", "Fourth step description"],
+      "narration": "Narrator script"
+    },
+    {
+      "type": "example",
+      "heading": "Real-World Example",
+      "visual": "globe",
+      "text": "A concrete example showing how this works in practice.",
+      "narration": "Narrator script"
+    },
+    {
+      "type": "quote",
+      "heading": "Notable Perspective",
+      "visual": "book",
+      "text": "An insightful quote or key perspective about this topic from an expert or study.",
+      "narration": "Narrator script"
     },
     {
       "type": "concept",
       "heading": "Key Insight",
       "visual": "target",
       "text": "A profound insight or key takeaway about the topic.",
-      "narration": "Narrator script for this scene"
+      "narration": "Narrator script"
+    },
+    {
+      "type": "quiz",
+      "heading": "Think About This",
+      "visual": "star",
+      "text": "A thought-provoking question or challenge related to the topic.",
+      "narration": "Narrator script"
     },
     {
       "type": "conclusion",
       "heading": "Summary & Impact",
       "visual": "star",
       "items": ["Key takeaway 1", "Key takeaway 2", "Key takeaway 3"],
-      "narration": "Narrator script for this scene"
+      "narration": "Narrator script"
     }
   ]
 }
 
-Generate actual research-based content about the topic. Use ALL scene types appropriately. Each scene should have 2-4 items maximum. Keep narration concise (1-2 sentences per scene). Use clear, professional language suitable for educational content. Make the video flow naturally. Include a mix of scene types — not just text, but also comparisons, timelines, diagrams, and explanations."""
+Generate actual research-based content about the topic. Use ALL scene types in a logical order. Mix visuals and text. Each scene should have 2-4 items maximum. Keep narration concise (1-2 sentences). Use clear, professional language suitable for educational content. Make the video flow naturally with a mix of explanations, examples, comparisons, and insights."""
 
-    content = f"Research Topic: {body.title}\n\nCreate an engaging animated educational video with rich visual scenes covering the overview, key concepts, comparisons, timeline, and implications of this topic."
+    content = f"Research Topic: {body.title}\n\nCreate an engaging animated educational video with 10-12 rich visual scenes covering overview, concepts, examples, comparisons, timeline, and implications of this topic."
     client = AIClient(api_key=body.api_key)
     result = await client.chat([
         {"role": "system", "content": system},
@@ -468,14 +489,17 @@ Generate actual research-based content about the topic. Use ALL scene types appr
         except:
             pass
     return {"script": {"scenes": [
-        {"type": "title", "heading": body.title, "subheading": "Animated Explainer", "visual": "sparkle", "narration": f"Welcome to this animated exploration of {body.title}."},
-        {"type": "explain", "heading": "Understanding the Topic", "visual": "lightbulb", "text": f"This video explores {body.title} and its significance in the modern world.", "narration": f"Let us explore what {body.title} means and why it matters."},
-        {"type": "diagram", "heading": "Key Components", "visual": "gear", "items": ["Core concept and foundation", "Major developments and advances", "Practical applications emerging", "Future directions and potential"], "narration": "Several key components make up this important field."},
-        {"type": "compare", "heading": "Before & After", "visual": "balance", "left": "Traditional understanding", "right": "Modern perspective", "narration": "Our understanding has evolved significantly over time."},
-        {"type": "timeline", "heading": "Recent Developments", "visual": "clock", "items": ["Early foundations established", "Major breakthroughs achieved", "Novel approaches emerged", "Current cutting-edge research"], "narration": "Let us trace the key developments in this field."},
-        {"type": "step", "heading": "How to Get Started", "visual": "list", "items": ["Understand the fundamental principles", "Explore current research and literature", "Apply knowledge to practical problems", "Contribute to ongoing discoveries"], "narration": "Here is how you can engage with this topic."},
-        {"type": "concept", "heading": "Key Insight", "visual": "target", "text": "The true value of this field lies in its potential to transform how we approach complex challenges.", "narration": "The most important insight is the transformative potential of this field."},
-        {"type": "conclusion", "heading": "Summary", "visual": "star", "items": ["Significant progress has been made", "Exciting opportunities lie ahead", "Continued research is essential"], "narration": "In conclusion, this field offers tremendous opportunities for discovery and impact."}
+        {"type": "title", "heading": body.title, "subheading": "Animated Explainer", "visual": "sparkle", "narration": "Welcome to this animated exploration."},
+        {"type": "explain", "heading": "Understanding the Topic", "visual": "lightbulb", "text": "This video explores " + body.title + " and its significance.", "narration": "Let us explore what this topic means."},
+        {"type": "diagram", "heading": "Key Components", "visual": "gear", "items": ["Core concepts and foundations", "Major developments and advances", "Practical applications emerging", "Future directions and potential"], "narration": "Several key components make up this field."},
+        {"type": "compare", "heading": "Before & After", "visual": "balance", "left": "Traditional understanding", "right": "Modern perspective", "narration": "Our understanding has evolved significantly."},
+        {"type": "timeline", "heading": "Recent Developments", "visual": "clock", "items": ["Early foundations established", "Major breakthroughs achieved", "Novel approaches emerged", "Current cutting-edge research"], "narration": "Key developments in this field."},
+        {"type": "example", "heading": "Real-World Application", "visual": "globe", "text": "This technology is already transforming industries and enabling new possibilities.", "narration": "A real-world example of this in action."},
+        {"type": "quote", "heading": "Expert Perspective", "visual": "book", "text": "The most exciting breakthroughs of the 21st century will not occur because of technology alone, but because of our expanding understanding.", "narration": "An insightful perspective on this topic."},
+        {"type": "step", "heading": "Getting Started", "visual": "list", "items": ["Understand the fundamentals", "Explore current research", "Apply to practical problems", "Contribute to discoveries"], "narration": "Here is how to engage with this topic."},
+        {"type": "concept", "heading": "Key Insight", "visual": "target", "text": "The true value lies in its potential to transform how we approach complex challenges.", "narration": "The most important insight about this field."},
+        {"type": "quiz", "heading": "Consider This", "visual": "star", "text": "How might this field evolve in the next decade? What challenges remain unsolved?", "narration": "A thought-provoking question to consider."},
+        {"type": "conclusion", "heading": "Summary", "visual": "star", "items": ["Significant progress made", "Exciting opportunities ahead", "Continued research essential"], "narration": "In conclusion, this field offers tremendous opportunities."}
     ]}}
 
 class GeneratePresentationRequest(BaseModel):
