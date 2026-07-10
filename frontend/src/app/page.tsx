@@ -303,11 +303,7 @@ export default function ChatPage() {
   const [showMsgSearch, setShowMsgSearch] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
   const [showVideoGen, setShowVideoGen] = useState(false);
-  const [videoTitle, setVideoTitle] = useState('');
-  const [videoAuthors, setVideoAuthors] = useState('');
-  const [videoAbstract, setVideoAbstract] = useState('');
-  const [videoFindings, setVideoFindings] = useState('');
-  const [videoConclusion, setVideoConclusion] = useState('');
+  const [videoTopic, setVideoTopic] = useState('');
   const [videoScript, setVideoScript] = useState<any>(null);
   const [videoGenerating, setVideoGenerating] = useState(false);
   const [videoRecording, setVideoRecording] = useState(false);
@@ -681,7 +677,7 @@ export default function ChatPage() {
   };
 
   const generateVideoScript = async () => {
-    if (!videoTitle.trim()) return;
+    if (!videoTopic.trim()) return;
     const t = await ensureToken();
     if (!t) return;
     setVideoGenerating(true);
@@ -689,7 +685,7 @@ export default function ChatPage() {
     try {
       const r = await fetch(`${API}/ai/generate-video-script`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` },
-        body: JSON.stringify({ title: videoTitle, authors: videoAuthors, abstract: videoAbstract, findings: videoFindings, conclusion: videoConclusion, api_key: gk, provider }),
+        body: JSON.stringify({ title: videoTopic, api_key: gk, provider }),
       });
       if (r.ok) { const d = await r.json(); setVideoScript(d.script); }
       else { addToast('Failed to generate script', 'error'); }
@@ -844,7 +840,7 @@ export default function ChatPage() {
     if (!videoPreviewUrl) return;
     const a = document.createElement('a');
     a.href = videoPreviewUrl;
-    a.download = `${videoTitle.slice(0, 40).replace(/[^a-zA-Z0-9]/g, '_')}_video.webm`;
+    a.download = `${videoTopic.slice(0, 40).replace(/[^a-zA-Z0-9]/g, '_')}_video.webm`;
     a.click();
   };
 
@@ -1660,34 +1656,20 @@ export default function ChatPage() {
             </div>
             {!videoScript ? (
               <div className="space-y-3 overflow-y-auto scrollbar-thin flex-1 pr-1">
-                <div>
-                  <label className="text-[10px] text-white/30 font-mono mb-1 block">Paper Title *</label>
-                  <input value={videoTitle} onChange={e => setVideoTitle(e.target.value)} placeholder="e.g. Quantum Machine Learning for Drug Discovery"
-                    className="w-full h-9 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 text-xs text-white/70 outline-none focus:border-cyan-500/30 transition-colors placeholder:text-white/15" />
+                <div className="flex items-center gap-3 mb-2 p-3 rounded-xl bg-indigo-500/5 border border-indigo-500/10">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/20 shrink-0">
+                    <Video className="h-4 w-4 text-indigo-400" />
+                  </div>
+                  <p className="text-[11px] text-white/40 leading-relaxed">Enter a research topic and VEDA will generate a complete animated video with AI narration.</p>
                 </div>
                 <div>
-                  <label className="text-[10px] text-white/30 font-mono mb-1 block">Authors</label>
-                  <input value={videoAuthors} onChange={e => setVideoAuthors(e.target.value)} placeholder="e.g. Smith, J., Patel, R."
-                    className="w-full h-9 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 text-xs text-white/70 outline-none focus:border-cyan-500/30 transition-colors placeholder:text-white/15" />
+                  <label className="text-[10px] text-white/30 font-mono mb-1 block">Research Topic *</label>
+                  <textarea value={videoTopic} onChange={e => setVideoTopic(e.target.value)} placeholder="e.g. Quantum Machine Learning for Drug Discovery, or Climate Change Adaptation in Coastal Cities"
+                    className="w-full h-24 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-xs text-white/70 outline-none focus:border-cyan-500/30 transition-colors placeholder:text-white/15 resize-none" />
                 </div>
-                <div>
-                  <label className="text-[10px] text-white/30 font-mono mb-1 block">Abstract</label>
-                  <textarea value={videoAbstract} onChange={e => setVideoAbstract(e.target.value)} placeholder="Paste the abstract..."
-                    className="w-full h-20 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-xs text-white/70 outline-none focus:border-cyan-500/30 transition-colors placeholder:text-white/15 resize-none" />
-                </div>
-                <div>
-                  <label className="text-[10px] text-white/30 font-mono mb-1 block">Key Findings</label>
-                  <textarea value={videoFindings} onChange={e => setVideoFindings(e.target.value)} placeholder="List the main findings..."
-                    className="w-full h-20 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-xs text-white/70 outline-none focus:border-cyan-500/30 transition-colors placeholder:text-white/15 resize-none" />
-                </div>
-                <div>
-                  <label className="text-[10px] text-white/30 font-mono mb-1 block">Conclusion</label>
-                  <textarea value={videoConclusion} onChange={e => setVideoConclusion(e.target.value)} placeholder="Key takeaways..."
-                    className="w-full h-16 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-xs text-white/70 outline-none focus:border-cyan-500/30 transition-colors placeholder:text-white/15 resize-none" />
-                </div>
-                <button onClick={generateVideoScript} disabled={!videoTitle.trim() || videoGenerating}
-                  className="w-full h-9 rounded-lg bg-gradient-to-r from-cyan-500 to-indigo-500 text-white text-xs font-medium hover:opacity-90 disabled:opacity-20 transition-all flex items-center justify-center gap-2">
-                  {videoGenerating ? <><span className="h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin" /> Generating Script...</> : <><Video className="h-3.5 w-3.5" /> Generate Video Script</>}
+                <button onClick={generateVideoScript} disabled={!videoTopic.trim() || videoGenerating}
+                  className="w-full h-9 rounded-lg bg-gradient-to-r from-cyan-500 to-indigo-500 text-white text-xs font-medium hover:opacity-90 disabled:opacity-20 transition-all flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20">
+                  {videoGenerating ? <><span className="h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin" /> Generating...</> : <><Video className="h-3.5 w-3.5" /> Generate Video</>}
                 </button>
               </div>
             ) : (

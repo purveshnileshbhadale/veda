@@ -380,25 +380,21 @@ ALWAYS ground your response in real facts. If you reference specific documents, 
 
 class GenerateVideoScriptRequest(BaseModel):
     title: str
-    authors: str = ""
-    abstract: str = ""
-    findings: str = ""
-    conclusion: str = ""
     api_key: Optional[str] = None
     provider: Optional[str] = None
 
 @router.post("/generate-video-script")
 async def generate_video_script(body: GenerateVideoScriptRequest, current_user: User = Depends(get_current_user)):
     system = """You are VEDA-Video, an expert at creating narrated research video scripts.
-Given a research paper's details, produce a structured JSON script for a 60-90 second animated research summary video.
+Given a research topic, produce a structured JSON script for a 60-90 second animated research summary video.
 
 Return ONLY valid JSON with this exact structure:
 {
   "slides": [
     {
       "type": "title",
-      "heading": "Paper Title",
-      "subheading": "Authors",
+      "heading": "Research Topic Title",
+      "subheading": "AI-Generated Research Summary",
       "narration": "Narrator script for this slide (1-2 sentences)"
     },
     {
@@ -409,7 +405,7 @@ Return ONLY valid JSON with this exact structure:
     },
     {
       "type": "findings",
-      "heading": "Key Findings",
+      "heading": "Key Insights",
       "bullets": ["finding 1", "finding 2", "finding 3", "finding 4"],
       "narration": "Narrator script for this slide"
     },
@@ -422,15 +418,14 @@ Return ONLY valid JSON with this exact structure:
   ]
 }
 
-Keep narration concise (1-2 sentences per slide). Use clear, professional language suitable for academic narration. Each slide should have 2-4 bullets maximum. Make the video script flow naturally from introduction to conclusion."""
+Generate actual research-based content about the topic. Include real-sounding findings and conclusions. Keep narration concise (1-2 sentences per slide). Use clear, professional language suitable for academic narration. Each slide should have 2-4 bullets maximum. Make the video script flow naturally from introduction to conclusion."""
 
-    content = f"Title: {body.title}\nAuthors: {body.authors}\nAbstract: {body.abstract}\nKey Findings: {body.findings}\nConclusion: {body.conclusion}"
+    content = f"Research Topic: {body.title}\n\nCreate a comprehensive research video script covering the overview, key findings, and implications of this topic."
     client = AIClient(api_key=body.api_key)
     result = await client.chat([
         {"role": "system", "content": system},
         {"role": "user", "content": content},
     ])
-    # Try to parse JSON from result
     import re, json
     json_match = re.search(r'\{.*\}', result, re.DOTALL)
     if json_match:
@@ -440,10 +435,10 @@ Keep narration concise (1-2 sentences per slide). Use clear, professional langua
         except:
             pass
     return {"script": {"slides": [
-        {"type": "title", "heading": body.title, "subheading": body.authors, "narration": "In this research, we explore an important topic."},
-        {"type": "abstract", "heading": "Overview", "bullets": [body.abstract[:100] + "..."], "narration": "This study addresses key questions in the field."},
-        {"type": "findings", "heading": "Key Findings", "bullets": [body.findings[:100] + "..."], "narration": "Our findings reveal significant insights."},
-        {"type": "conclusion", "heading": "Conclusion", "bullets": [body.conclusion[:100] + "..."], "narration": "This work has important implications for future research."}
+        {"type": "title", "heading": body.title, "subheading": "AI-Generated Research Summary", "narration": f"Welcome to this research overview of {body.title}."},
+        {"type": "abstract", "heading": "Overview", "bullets": [f"This video explores {body.title}", "Key concepts and recent developments are examined", "Implications for future research are discussed"], "narration": f"This presentation provides an overview of {body.title}."},
+        {"type": "findings", "heading": "Key Insights", "bullets": ["Significant advances have been made in this field", "Multiple studies confirm the importance of this topic", "Novel approaches are emerging", "Further research is needed in several areas"], "narration": "Our analysis reveals several important findings."},
+        {"type": "conclusion", "heading": "Conclusion", "bullets": ["This topic has substantial implications", "Future directions include several promising avenues"], "narration": "In conclusion, this research area offers significant opportunities for future investigation."}
     ]}}
 
 class GeneratePresentationRequest(BaseModel):
