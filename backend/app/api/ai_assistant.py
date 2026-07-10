@@ -385,42 +385,75 @@ class GenerateVideoScriptRequest(BaseModel):
 
 @router.post("/generate-video-script")
 async def generate_video_script(body: GenerateVideoScriptRequest, current_user: User = Depends(get_current_user)):
-    system = """You are VEDA-Video, an expert at creating narrated research video scripts.
-Given a research topic, produce a structured JSON script for a 60-90 second animated research summary video.
+    system = """You are VEDA-Video, an expert at creating animated educational video scripts.
+Given a research topic, produce a structured JSON script for a 60-90 second animated explainer video with rich visual scenes — NOT just slides.
 
 Return ONLY valid JSON with this exact structure:
 {
-  "slides": [
+  "scenes": [
     {
       "type": "title",
       "heading": "Research Topic Title",
-      "subheading": "AI-Generated Research Summary",
-      "narration": "Narrator script for this slide (1-2 sentences)"
+      "subheading": "Animated Explainer",
+      "visual": "sparkle",
+      "narration": "Narrator script for this scene (1-2 sentences)"
     },
     {
-      "type": "abstract",
-      "heading": "Overview",
-      "bullets": ["bullet point 1", "bullet point 2", "bullet point 3"],
-      "narration": "Narrator script for this slide"
+      "type": "explain",
+      "heading": "The Core Concept",
+      "visual": "lightbulb",
+      "text": "A clear explanation of the main concept in 1-2 sentences.",
+      "narration": "Narrator script for this scene"
     },
     {
-      "type": "findings",
-      "heading": "Key Insights",
-      "bullets": ["finding 1", "finding 2", "finding 3", "finding 4"],
-      "narration": "Narrator script for this slide"
+      "type": "diagram",
+      "heading": "How It Works",
+      "visual": "gear",
+      "items": ["Component 1 — brief description", "Component 2 — brief description", "Component 3 — brief description", "Component 4 — brief description"],
+      "narration": "Narrator script for this scene"
+    },
+    {
+      "type": "compare",
+      "heading": "Key Comparison",
+      "visual": "balance",
+      "left": "Traditional Approach",
+      "right": "New Approach",
+      "narration": "Narrator script for this scene"
+    },
+    {
+      "type": "timeline",
+      "heading": "Evolution & Progress",
+      "visual": "clock",
+      "items": ["2018 — Milestone one", "2020 — Milestone two", "2022 — Milestone three", "2024 — Current state"],
+      "narration": "Narrator script for this scene"
+    },
+    {
+      "type": "step",
+      "heading": "Step-by-Step Process",
+      "visual": "list",
+      "items": ["First, understand the fundamentals", "Then, apply the core methodology", "Next, analyze the results", "Finally, draw conclusions"],
+      "narration": "Narrator script for this scene"
+    },
+    {
+      "type": "concept",
+      "heading": "Key Insight",
+      "visual": "target",
+      "text": "A profound insight or key takeaway about the topic.",
+      "narration": "Narrator script for this scene"
     },
     {
       "type": "conclusion",
-      "heading": "Conclusion & Impact",
-      "bullets": ["conclusion point 1", "conclusion point 2"],
-      "narration": "Narrator script for this slide"
+      "heading": "Summary & Impact",
+      "visual": "star",
+      "items": ["Key takeaway 1", "Key takeaway 2", "Key takeaway 3"],
+      "narration": "Narrator script for this scene"
     }
   ]
 }
 
-Generate actual research-based content about the topic. Include real-sounding findings and conclusions. Keep narration concise (1-2 sentences per slide). Use clear, professional language suitable for academic narration. Each slide should have 2-4 bullets maximum. Make the video script flow naturally from introduction to conclusion."""
+Generate actual research-based content about the topic. Use ALL scene types appropriately. Each scene should have 2-4 items maximum. Keep narration concise (1-2 sentences per scene). Use clear, professional language suitable for educational content. Make the video flow naturally. Include a mix of scene types — not just text, but also comparisons, timelines, diagrams, and explanations."""
 
-    content = f"Research Topic: {body.title}\n\nCreate a comprehensive research video script covering the overview, key findings, and implications of this topic."
+    content = f"Research Topic: {body.title}\n\nCreate an engaging animated educational video with rich visual scenes covering the overview, key concepts, comparisons, timeline, and implications of this topic."
     client = AIClient(api_key=body.api_key)
     result = await client.chat([
         {"role": "system", "content": system},
@@ -434,11 +467,15 @@ Generate actual research-based content about the topic. Include real-sounding fi
             return {"script": parsed}
         except:
             pass
-    return {"script": {"slides": [
-        {"type": "title", "heading": body.title, "subheading": "AI-Generated Research Summary", "narration": f"Welcome to this research overview of {body.title}."},
-        {"type": "abstract", "heading": "Overview", "bullets": [f"This video explores {body.title}", "Key concepts and recent developments are examined", "Implications for future research are discussed"], "narration": f"This presentation provides an overview of {body.title}."},
-        {"type": "findings", "heading": "Key Insights", "bullets": ["Significant advances have been made in this field", "Multiple studies confirm the importance of this topic", "Novel approaches are emerging", "Further research is needed in several areas"], "narration": "Our analysis reveals several important findings."},
-        {"type": "conclusion", "heading": "Conclusion", "bullets": ["This topic has substantial implications", "Future directions include several promising avenues"], "narration": "In conclusion, this research area offers significant opportunities for future investigation."}
+    return {"script": {"scenes": [
+        {"type": "title", "heading": body.title, "subheading": "Animated Explainer", "visual": "sparkle", "narration": f"Welcome to this animated exploration of {body.title}."},
+        {"type": "explain", "heading": "Understanding the Topic", "visual": "lightbulb", "text": f"This video explores {body.title} and its significance in the modern world.", "narration": f"Let us explore what {body.title} means and why it matters."},
+        {"type": "diagram", "heading": "Key Components", "visual": "gear", "items": ["Core concept and foundation", "Major developments and advances", "Practical applications emerging", "Future directions and potential"], "narration": "Several key components make up this important field."},
+        {"type": "compare", "heading": "Before & After", "visual": "balance", "left": "Traditional understanding", "right": "Modern perspective", "narration": "Our understanding has evolved significantly over time."},
+        {"type": "timeline", "heading": "Recent Developments", "visual": "clock", "items": ["Early foundations established", "Major breakthroughs achieved", "Novel approaches emerged", "Current cutting-edge research"], "narration": "Let us trace the key developments in this field."},
+        {"type": "step", "heading": "How to Get Started", "visual": "list", "items": ["Understand the fundamental principles", "Explore current research and literature", "Apply knowledge to practical problems", "Contribute to ongoing discoveries"], "narration": "Here is how you can engage with this topic."},
+        {"type": "concept", "heading": "Key Insight", "visual": "target", "text": "The true value of this field lies in its potential to transform how we approach complex challenges.", "narration": "The most important insight is the transformative potential of this field."},
+        {"type": "conclusion", "heading": "Summary", "visual": "star", "items": ["Significant progress has been made", "Exciting opportunities lie ahead", "Continued research is essential"], "narration": "In conclusion, this field offers tremendous opportunities for discovery and impact."}
     ]}}
 
 class GeneratePresentationRequest(BaseModel):

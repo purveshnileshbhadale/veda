@@ -754,6 +754,238 @@ export default function ChatPage() {
 
   const videoCanvasRef = useRef<HTMLCanvasElement>(null);
 
+  // ── Rich Scene Renderer ──────────────────────────────────
+  const icons: Record<string, string> = { sparkle: '✦', lightbulb: '💡', gear: '⚙', balance: '⚖', clock: '⏱', list: '☰', target: '◎', star: '★', atom: '⚛', globe: '🌐', book: '📖', chart: '📊' };
+
+  const drawScene = (ctx: CanvasRenderingContext2D, scene: any, t: number, colorSet: any, W: number, H: number) => {
+    const s = Math.min(t * 2, 1);
+    const b = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+    ctx.save();
+    ctx.globalAlpha = s;
+    ctx.translate(0, (1 - b) * 30);
+
+    // ── Title ──
+    if (scene.type === 'title') {
+      const ra = t * Math.PI * 2;
+      ctx.strokeStyle = colorSet.p; ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.3 * s;
+      ctx.beginPath(); ctx.arc(W/2, 100, 45, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(W/2, 100, 45, ra - 0.5, ra + 0.3); ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
+      ctx.globalAlpha = s;
+      ctx.shadowColor = colorSet.p; ctx.shadowBlur = 40;
+      ctx.fillStyle = colorSet.p; ctx.beginPath(); ctx.roundRect(W/2-24, 76, 48, 48, 12); ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#fff'; ctx.font = '24px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(icons[scene.visual] || '✦', W/2, 108);
+      ctx.fillStyle = 'rgba(255,255,255,0.95)'; ctx.font = 'bold 38px sans-serif'; ctx.textAlign = 'center';
+      wrapText(ctx, scene.heading || '', W/2, 200, W-140, 50);
+      const ulW = Math.min(t * 280, 280);
+      ctx.fillStyle = colorSet.p; ctx.globalAlpha = 0.5 * s; ctx.fillRect(W/2 - ulW/2, 255, ulW, 3);
+      if (scene.subheading) { ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = '16px sans-serif'; ctx.fillText(scene.subheading, W/2, 305); }
+    }
+
+    // ── Explain ──
+    else if (scene.type === 'explain') {
+      ctx.shadowColor = colorSet.a; ctx.shadowBlur = 30;
+      ctx.fillStyle = colorSet.a + '22'; ctx.beginPath(); ctx.roundRect(W/2-40, 70, 80, 80, 20); ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.font = '36px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(icons[scene.visual] || '💡', W/2, 126);
+      ctx.fillStyle = colorSet.p; ctx.fillRect(80, 175, 40, 4);
+      ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = 'bold 26px sans-serif'; ctx.textAlign = 'left'; ctx.fillText(scene.heading || '', 80, 222);
+      if (scene.text) {
+        const fadeIn = Math.min((t - 0.2) * 3, 1);
+        ctx.globalAlpha = Math.max(0, fadeIn * s);
+        ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = '18px sans-serif'; ctx.textAlign = 'left';
+        wrapText(ctx, scene.text, 85, 270, W - 180, 28);
+      }
+    }
+
+    // ── Diagram ──
+    else if (scene.type === 'diagram') {
+      ctx.fillStyle = colorSet.a + '22'; ctx.beginPath(); ctx.roundRect(W/2-35, 70, 70, 70, 18); ctx.fill();
+      ctx.font = '32px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(icons[scene.visual] || '⚙', W/2, 117);
+      ctx.fillStyle = colorSet.p; ctx.fillRect(80, 165, 40, 4);
+      ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'left'; ctx.fillText(scene.heading || '', 80, 210);
+      const items = scene.items || [];
+      const rows = Math.min(items.length, 4);
+      const boxW = 200, boxH = 50, gap = 60;
+      const startX = (W - (rows * boxW + (rows - 1) * 20)) / 2;
+      for (let i = 0; i < rows; i++) {
+        const dt = Math.max(0, Math.min((t * rows * 2 - i) / 1.5, 1));
+        if (dt <= 0) continue;
+        ctx.globalAlpha = dt;
+        const dx = (1 - (dt < 0.5 ? 2 * dt * dt : 1 - Math.pow(-2 * dt + 2, 2) / 2)) * 40;
+        const x = startX + i * (boxW + 20);
+        const y = 250 + i % 2 * (boxH + 15);
+        ctx.fillStyle = colorSet.p + '15'; ctx.beginPath(); ctx.roundRect(x, y + dx, boxW, boxH, 10); ctx.fill();
+        ctx.strokeStyle = colorSet.p + '30'; ctx.lineWidth = 1; ctx.beginPath(); ctx.roundRect(x, y + dx, boxW, boxH, 10); ctx.stroke();
+        ctx.fillStyle = colorSet.a; ctx.font = '12px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(items[i].length > 30 ? items[i].slice(0, 28) + '…' : items[i], x + boxW/2, y + dx + 30);
+        if (i < rows - 1) { ctx.strokeStyle = colorSet.p + '20'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x + boxW, y + dx + boxH/2); ctx.lineTo(x + boxW + 20, y + dx + boxH/2); ctx.stroke(); }
+      }
+    }
+
+    // ── Compare ──
+    else if (scene.type === 'compare') {
+      ctx.font = '32px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(icons[scene.visual] || '⚖', W/2, 85);
+      ctx.fillStyle = colorSet.p; ctx.fillRect(80, 110, 40, 4);
+      ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'left'; ctx.fillText(scene.heading || '', 80, 155);
+      const left = scene.left || 'Before', right = scene.right || 'After';
+      const lt = Math.min(t * 2, 1), rt = Math.max(0, Math.min((t - 0.3) * 2, 1));
+      const lx = 60, rx = W/2 + 40, boxW2 = W/2 - 100, boxH2 = 200, boxY = 200;
+      ctx.globalAlpha = lt; ctx.fillStyle = colorSet.p + '15'; ctx.beginPath(); ctx.roundRect(lx, boxY, boxW2, boxH2, 12); ctx.fill();
+      ctx.strokeStyle = colorSet.p + '30'; ctx.lineWidth = 1; ctx.beginPath(); ctx.roundRect(lx, boxY, boxW2, boxH2, 12); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '12px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('← ' + left + ' →', lx + boxW2/2, boxY + 30);
+      ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = '14px sans-serif'; wrapText(ctx, 'Traditional methods and established practices in this domain.', lx + 20, boxY + 60, boxW2 - 40, 22);
+      ctx.globalAlpha = rt; ctx.fillStyle = colorSet.a + '15'; ctx.beginPath(); ctx.roundRect(rx, boxY, boxW2, boxH2, 12); ctx.fill();
+      ctx.strokeStyle = colorSet.a + '30'; ctx.lineWidth = 1; ctx.beginPath(); ctx.roundRect(rx, boxY, boxW2, boxH2, 12); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '12px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('← ' + right + ' →', rx + boxW2/2, boxY + 30);
+      ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = '14px sans-serif'; wrapText(ctx, 'Modern approaches and innovative solutions transforming the field.', rx + 20, boxY + 60, boxW2 - 40, 22);
+      ctx.globalAlpha = Math.min(lt, rt) * 0.3;
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]); ctx.beginPath(); ctx.moveTo(W/2, boxY); ctx.lineTo(W/2, boxY + boxH2); ctx.stroke(); ctx.setLineDash([]);
+    }
+
+    // ── Timeline ──
+    else if (scene.type === 'timeline') {
+      ctx.font = '32px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(icons[scene.visual] || '⏱', W/2, 85);
+      ctx.fillStyle = colorSet.p; ctx.fillRect(80, 110, 40, 4);
+      ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'left'; ctx.fillText(scene.heading || '', 80, 155);
+      const items = scene.items || [];
+      const lineY = 210;
+      ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(60, lineY, W - 120, 3);
+      const segW = (W - 160) / Math.max(items.length, 2);
+      for (let i = 0; i < items.length; i++) {
+        const dt = Math.max(0, Math.min((t * items.length - i) * 2, 1));
+        if (dt <= 0) continue;
+        const x = 80 + i * segW + segW / 2;
+        ctx.globalAlpha = dt;
+        ctx.fillStyle = colorSet.a; ctx.beginPath(); ctx.arc(x, lineY, 7, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, lineY, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+        wrapText(ctx, items[i], x, lineY + 30, segW - 10, 16);
+      }
+    }
+
+    // ── Step ──
+    else if (scene.type === 'step') {
+      ctx.font = '32px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(icons[scene.visual] || '☰', W/2, 85);
+      ctx.fillStyle = colorSet.p; ctx.fillRect(80, 110, 40, 4);
+      ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'left'; ctx.fillText(scene.heading || '', 80, 155);
+      const items = scene.items || [];
+      const startY = 195, stepH = 58;
+      for (let i = 0; i < items.length; i++) {
+        const dt = Math.max(0, Math.min((t * items.length * 2 - i) / 1.5, 1));
+        if (dt <= 0) continue;
+        ctx.globalAlpha = dt;
+        const dy = (1 - (dt < 0.5 ? 2 * dt * dt : 1 - Math.pow(-2 * dt + 2, 2) / 2)) * 20;
+        const y = startY + i * stepH + dy;
+        ctx.fillStyle = colorSet.p; ctx.beginPath(); ctx.arc(95, y + stepH/2 - 5, 14, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(String(i + 1), 95, y + stepH/2);
+        ctx.fillStyle = colorSet.p + '15'; ctx.beginPath(); ctx.roundRect(120, y - 4, W - 190, stepH, 10); ctx.fill();
+        ctx.strokeStyle = colorSet.p + '20'; ctx.lineWidth = 1; ctx.beginPath(); ctx.roundRect(120, y - 4, W - 190, stepH, 10); ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,0.65)'; ctx.font = '13px sans-serif'; ctx.textAlign = 'left';
+        wrapText(ctx, items[i], 135, y + stepH/2 + 2, W - 220, 18);
+      }
+    }
+
+    // ── Concept ──
+    else if (scene.type === 'concept') {
+      const pulse = Math.sin(t * Math.PI * 2) * 0.15 + 0.85;
+      ctx.shadowColor = colorSet.a; ctx.shadowBlur = 30 * pulse;
+      ctx.fillStyle = colorSet.a + '22'; ctx.beginPath(); ctx.roundRect(W/2-35, 70, 70, 70, 18); ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.font = '32px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(icons[scene.visual] || '◎', W/2, 117);
+      ctx.fillStyle = colorSet.p; ctx.fillRect(80, 165, 40, 4);
+      ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = 'bold 26px sans-serif'; ctx.textAlign = 'left'; ctx.fillText(scene.heading || '', 80, 210);
+      if (scene.text) {
+        const fadeIn = Math.min((t - 0.3) * 3, 1);
+        ctx.globalAlpha = Math.max(0, fadeIn * s);
+        ctx.shadowColor = colorSet.a; ctx.shadowBlur = 20;
+        ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'center';
+        wrapText(ctx, scene.text, W/2, 300, W - 160, 30);
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    // ── Conclusion ──
+    else if (scene.type === 'conclusion') {
+      const sparkle = Math.sin(t * Math.PI * 3) * 0.5 + 0.5;
+      ctx.shadowColor = colorSet.a; ctx.shadowBlur = 40;
+      ctx.fillStyle = colorSet.p + '22'; ctx.beginPath(); ctx.roundRect(W/2-35, 70, 70, 70, 18); ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.font = '36px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(icons[scene.visual] || '★', W/2, 118);
+      ctx.fillStyle = colorSet.p; ctx.fillRect(80, 165, 40, 4);
+      ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = 'bold 26px sans-serif'; ctx.textAlign = 'left'; ctx.fillText(scene.heading || '', 80, 210);
+      const items = scene.items || [];
+      for (let i = 0; i < items.length; i++) {
+        const dt = Math.max(0, Math.min((t * items.length * 2 - i) / 1.5, 1));
+        if (dt <= 0) continue;
+        ctx.globalAlpha = dt * sparkle * 0.7 + dt * 0.3;
+        const dy = (1 - dt) * 30;
+        const y = 260 + i * 50 + dy;
+        ctx.fillStyle = colorSet.a; ctx.beginPath(); ctx.arc(100, y, 6, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.font = '16px sans-serif'; ctx.textAlign = 'left';
+        wrapText(ctx, items[i], 125, y + 5, W - 200, 22);
+      }
+    }
+
+    // ── Generic/fallback ──
+    else {
+      ctx.fillStyle = colorSet.p; ctx.fillRect(80, 100, 40, 4);
+      ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.font = 'bold 28px sans-serif'; ctx.textAlign = 'left';
+      ctx.fillText(scene.heading || '', 100, 145);
+      const items = scene.items || scene.bullets || [];
+      for (let i = 0; i < items.length; i++) {
+        const dt = Math.max(0, Math.min((t * items.length * 2 - i) / 1.5, 1));
+        if (dt <= 0) continue;
+        ctx.globalAlpha = dt;
+        ctx.fillStyle = colorSet.a; ctx.beginPath(); ctx.arc(110, 200 + i * 50, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = '16px sans-serif'; ctx.textAlign = 'left';
+        wrapText(ctx, items[i], 130, 200 + i * 50 + 6, W - 200, 24);
+      }
+    }
+    ctx.restore();
+  };
+
+  const drawCharacter = (ctx: CanvasRenderingContext2D, t: number, talking: boolean, W: number, H: number) => {
+    const cx = W - 120, cy = H - 140, bob = Math.sin(t * Math.PI * 2) * 3;
+    const mouthOpen = talking ? Math.sin(t * Math.PI * 8) * 0.4 + 0.5 : 0.1;
+
+    ctx.save();
+
+    // Glow
+    const cg = ctx.createRadialGradient(cx, cy + 20, 0, cx, cy + 20, 80);
+    cg.addColorStop(0, 'rgba(129,140,248,0.08)'); cg.addColorStop(1, 'transparent');
+    ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(cx, cy + 20, 80, 0, Math.PI * 2); ctx.fill();
+
+    // Body
+    ctx.fillStyle = 'rgba(129,140,248,0.15)'; ctx.beginPath();
+    ctx.moveTo(cx, cy + 50 + bob); ctx.lineTo(cx - 18, cy + 95 + bob); ctx.lineTo(cx + 18, cy + 95 + bob); ctx.closePath(); ctx.fill();
+
+    // Head
+    ctx.shadowColor = 'rgba(129,140,248,0.2)'; ctx.shadowBlur = 15;
+    ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.beginPath(); ctx.arc(cx, cy - 5 + bob, 28, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(129,140,248,0.3)'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Eyes
+    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.beginPath(); ctx.arc(cx - 9, cy - 8 + bob, 3.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + 9, cy - 8 + bob, 3.5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.beginPath(); ctx.arc(cx - 8, cy - 9 + bob, 1.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + 10, cy - 9 + bob, 1.5, 0, Math.PI * 2); ctx.fill();
+
+    // Mouth
+    ctx.fillStyle = 'rgba(129,140,248,0.4)';
+    ctx.beginPath(); ctx.ellipse(cx, cy + 5 + bob, 6, 2 + mouthOpen * 4, 0, 0, Math.PI * 2); ctx.fill();
+
+    // Small sparkle near head
+    const sp = Math.sin(t * Math.PI * 5) * 0.5 + 0.5;
+    ctx.fillStyle = `rgba(255,255,255,${0.15 * sp})`;
+    ctx.beginPath(); ctx.arc(cx + 30, cy - 20 + Math.sin(t * 2) * 5, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx - 25, cy - 15 + Math.cos(t * 1.7) * 4, 1.5, 0, Math.PI * 2); ctx.fill();
+
+    ctx.restore();
+  };
+
   const generateVideo = async () => {
     const canvas = videoCanvasRef.current;
     if (!canvas || !videoScript) return;
@@ -761,9 +993,9 @@ export default function ChatPage() {
     const ctx = canvas.getContext('2d')!;
     const W = 1280, H = 720;
     canvas.width = W; canvas.height = H;
-    const slides = videoScript.slides || [];
+    const scenes = videoScript.scenes || videoScript.slides || [];
     const fps = 30;
-    const secPerSlide = 6;
+    const secPerScene = 6;
 
     const stream = canvas.captureStream(fps);
     const recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
@@ -777,149 +1009,93 @@ export default function ChatPage() {
     recorder.start();
 
     let utt: SpeechSynthesisUtterance | null = null;
-    const speakSlide = (text: string) => {
+    const speakScene = (text: string) => {
       speechSynthesis.cancel();
-      if (text) { utt = new SpeechSynthesisUtterance(text); utt.rate = 0.85; utt.pitch = 1.05; if (videoVoice) { const v = voices.find(x => x.voiceURI === videoVoice); if (v) utt.voice = v; } speechSynthesis.speak(utt); }
+      if (text) { utt = new SpeechSynthesisUtterance(text); utt.rate = 0.85; utt.pitch = 1.05; const v = voices.find(x => x.voiceURI === videoVoice); if (v) utt.voice = v; speechSynthesis.speak(utt); }
     };
 
-    const particles = Array.from({ length: 30 }, () => ({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - 0.5) * 0.5, vy: (Math.random() - 0.5) * 0.5, r: 1 + Math.random() * 2, o: 0.2 + Math.random() * 0.3 }));
-    const colors = {
+    const particles = Array.from({ length: 35 }, () => ({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - 0.5) * 0.4, vy: (Math.random() - 0.5) * 0.4, r: 1 + Math.random() * 2, o: 0.15 + Math.random() * 0.25 }));
+    const colorMap: Record<string, any> = {
       title: { p: '#818cf8', a: '#34d399', b1: '#0a0a1a', b2: '#0f0f2a' },
-      abstract: { p: '#34d399', a: '#22d3ee', b1: '#0a0a1a', b2: '#0a1a1a' },
-      findings: { p: '#f59e0b', a: '#ef4444', b1: '#0a0a1a', b2: '#1a0f0a' },
-      conclusion: { p: '#a78bfa', a: '#ec4899', b1: '#0a0a1a', b2: '#100a1a' },
+      explain: { p: '#34d399', a: '#22d3ee', b1: '#0a0a1a', b2: '#0a1a1a' },
+      diagram: { p: '#f59e0b', a: '#ef4444', b1: '#0a0a1a', b2: '#1a0f0a' },
+      compare: { p: '#a78bfa', a: '#f472b6', b1: '#0a0a1a', b2: '#100a1a' },
+      timeline: { p: '#22d3ee', a: '#818cf8', b1: '#0a0a1a', b2: '#0a1a1a' },
+      step: { p: '#f97316', a: '#22d3ee', b1: '#0a0a1a', b2: '#1a0f0a' },
+      concept: { p: '#ec4899', a: '#a78bfa', b1: '#0a0a1a', b2: '#1a0a1a' },
+      conclusion: { p: '#34d399', a: '#f59e0b', b1: '#0a0a1a', b2: '#0a1a0a' },
     };
 
-    for (let si = 0; si < slides.length; si++) {
-      const slide = slides[si];
-      const c = (colors as any)[slide.type] || colors.abstract;
-      speakSlide(slide.narration || '');
-      for (let f = 0; f < secPerSlide * fps; f++) {
-        const t = f / (secPerSlide * fps);
+    for (let si = 0; si < scenes.length; si++) {
+      const scene = scenes[si];
+      const c = colorMap[scene.type as string] || { p: '#818cf8', a: '#22d3ee', b1: '#0a0a1a', b2: '#0f0f2a' };
+      speakScene(scene.narration || '');
+
+      for (let f = 0; f < secPerScene * fps; f++) {
+        const t = f / (secPerScene * fps);
         const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-        const bounce = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
         ctx.clearRect(0, 0, W, H);
 
-        const go = Math.sin(t * Math.PI * 2) * 0.1;
+        // Animated bg
+        const go = Math.sin(t * Math.PI * 2 + si) * 0.08;
         const g = ctx.createLinearGradient(0, 0, W * (0.5 + go), H);
         g.addColorStop(0, c.b1); g.addColorStop(0.5, c.b2); g.addColorStop(1, c.b1);
         ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
 
-        const gp = (Date.now() * 0.001) % 100;
-        for (let gx = 0; gx < W; gx += 28) for (let gy = 0; gy < H; gy += 28) {
-          const dd = Math.abs(gx - W/2) + Math.abs(gy - H/2);
-          const dg = Math.sin(gp + dd * 0.01) * 0.5 + 0.5;
-          ctx.fillStyle = `rgba(99,102,241,${0.02 + dg * 0.03})`;
-          ctx.beginPath(); ctx.arc(gx, gy, 0.8, 0, Math.PI * 2); ctx.fill();
+        // Grid
+        for (let gx = 0; gx < W; gx += 32) for (let gy = 0; gy < H; gy += 32) {
+          ctx.fillStyle = `rgba(99,102,241,${0.015 + Math.sin(Date.now() * 0.001 + gx * 0.01 + gy * 0.01) * 0.02})`;
+          ctx.beginPath(); ctx.arc(gx, gy, 0.6, 0, Math.PI * 2); ctx.fill();
         }
 
+        // Particles
         for (const p of particles) {
           p.x += p.vx; p.y += p.vy;
-          if (p.x < 0 || p.x > W) p.vx *= -1;
-          if (p.y < 0 || p.y > H) p.vy *= -1;
-          const pl = Math.sin(Date.now() * 0.0005 + p.x) * 0.3 + 0.7;
-          ctx.fillStyle = `rgba(255,255,255,${p.o * pl * 0.3})`;
+          if (p.x < 0 || p.x > W) p.vx *= -1; if (p.y < 0 || p.y > H) p.vy *= -1;
+          ctx.fillStyle = `rgba(255,255,255,${p.o * (Math.sin(Date.now() * 0.0005 + p.x) * 0.3 + 0.7) * 0.25})`;
           ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
         }
 
-        const op = Math.sin(t * Math.PI * 4) * 0.3 + 0.7;
-        const og = ctx.createRadialGradient(W/2, H/2, 50, W/2, H/2, 350);
-        og.addColorStop(0, c.p + `22`); og.addColorStop(0.5, `rgba(99,102,241,${0.02 * op})`); og.addColorStop(1, 'transparent');
+        // Glow orb
+        const og = ctx.createRadialGradient(W/2, H/2, 60, W/2, H/2, 350);
+        og.addColorStop(0, c.p + '15'); og.addColorStop(0.6, c.p + '08'); og.addColorStop(1, 'transparent');
         ctx.fillStyle = og; ctx.fillRect(0, 0, W, H);
 
-        const vg = ctx.createRadialGradient(W/2, H/2, H*0.3, W/2, H/2, H*0.8);
-        vg.addColorStop(0, 'transparent'); vg.addColorStop(1, 'rgba(0,0,0,0.4)');
+        // Vignette
+        const vg = ctx.createRadialGradient(W/2, H/2, H*0.35, W/2, H/2, H*0.8);
+        vg.addColorStop(0, 'transparent'); vg.addColorStop(1, 'rgba(0,0,0,0.35)');
         ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
 
-        ctx.fillStyle = 'rgba(255,255,255,0.015)';
+        // Scanline
+        ctx.fillStyle = 'rgba(255,255,255,0.01)';
         for (let ys = 0; ys < H; ys += 3) ctx.fillRect(0, ys, W, 1);
 
-        ctx.save();
-        const si2 = Math.min(ease * 2, 1);
-        ctx.globalAlpha = si2;
-        const sy2 = (1 - bounce) * 30;
-        ctx.translate(0, sy2);
-
+        // Corner accents
         ctx.strokeStyle = c.p; ctx.lineWidth = 1.5;
-        ctx.globalAlpha = 0.25 * si2;
-        const cs = 40, cp = 30;
+        ctx.globalAlpha = 0.2 * ease;
+        const cp = 25, cs = 30;
         ctx.beginPath(); ctx.moveTo(cp, cp+cs); ctx.lineTo(cp, cp); ctx.lineTo(cp+cs, cp); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(W-cp-cs, cp); ctx.lineTo(W-cp, cp); ctx.lineTo(W-cp, cp+cs); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(cp, H-cp-cs); ctx.lineTo(cp, H-cp); ctx.lineTo(cp+cs, H-cp); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(W-cp-cs, H-cp); ctx.lineTo(W-cp, H-cp); ctx.lineTo(W-cp, H-cp-cs); ctx.stroke();
-        ctx.globalAlpha = si2;
 
-        if (slide.type === 'title') {
-          const ra = t * Math.PI * 2 + si * Math.PI * 2;
-          ctx.strokeStyle = c.p; ctx.lineWidth = 2;
-          ctx.globalAlpha = 0.4 * si2;
-          ctx.beginPath(); ctx.arc(W/2, 100, 45, 0, Math.PI * 2); ctx.stroke();
-          ctx.beginPath(); ctx.arc(W/2, 100, 45, ra - 0.5, ra + 0.3); ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
-          ctx.globalAlpha = si2;
+        // Scene content
+        drawScene(ctx, scene, ease, c, W, H);
 
-          ctx.shadowColor = c.p; ctx.shadowBlur = 40;
-          ctx.fillStyle = c.p; ctx.beginPath(); ctx.roundRect(W/2-24, 76, 48, 48, 12); ctx.fill();
-          ctx.shadowBlur = 0;
-          ctx.fillStyle = '#fff'; ctx.font = '24px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('◆', W/2, 108);
+        // Character
+        drawCharacter(ctx, t + si * 0.5, !!scene.narration, W, H);
 
-          ctx.fillStyle = 'rgba(255,255,255,0.95)'; ctx.font = 'bold 40px sans-serif'; ctx.textAlign = 'center';
-          wrapText(ctx, slide.heading || '', W/2, 200, W-140, 52);
-
-          const ulW = Math.min(t * 300, 300);
-          ctx.fillStyle = c.p; ctx.globalAlpha = 0.5 * si2;
-          ctx.fillRect(W/2 - ulW/2, 260, ulW, 3);
-
-          if (slide.subheading) {
-            ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '18px sans-serif'; ctx.fillText(slide.subheading, W/2, 310);
-          }
-          ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.font = '12px monospace'; ctx.textAlign = 'center';
-          ctx.fillText('VEDA • AI Research Video', W/2, H-50);
-        } else {
-          ctx.fillStyle = c.p; ctx.fillRect(80, 90, 40, 4);
-
-          const hs = Math.min(t * 2, 1);
-          ctx.globalAlpha = si2 * hs;
-          ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = 'bold 30px sans-serif'; ctx.textAlign = 'left';
-          ctx.fillText(slide.heading || '', 80, 142 - (1 - hs) * 20);
-          ctx.globalAlpha = si2;
-
-          const bullets = slide.bullets || [];
-          const startY = 190, lineH = 56;
-          const maxVisible = Math.floor(t * bullets.length * 2.5);
-          for (let bi = 0; bi < bullets.length; bi++) {
-            if (bi > maxVisible) break;
-            const bt = Math.max(0, Math.min((t * bullets.length * 2.5 - bi) / 1.5, 1));
-            const bb = bt < 0.5 ? 4 * bt * bt * bt : 1 - Math.pow(-2 * bt + 2, 3) / 2;
-            ctx.globalAlpha = bt;
-            const bsh = (1 - bb) * 25;
-
-            ctx.shadowColor = c.a; ctx.shadowBlur = bt > 0.5 ? 15 : 0;
-            ctx.fillStyle = c.a; ctx.beginPath(); ctx.arc(110, startY + bi * lineH + bsh, 5, 0, Math.PI * 2); ctx.fill();
-            ctx.shadowBlur = 0;
-
-            ctx.fillStyle = c.a + '33'; ctx.font = '10px monospace'; ctx.textAlign = 'left';
-            ctx.fillText(`${String(bi + 1).padStart(2, '0')}`, 95, startY + bi * lineH + 4 + bsh);
-
-            ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 4;
-            ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.font = '19px sans-serif'; ctx.textAlign = 'left';
-            wrapText(ctx, bullets[bi], 135, startY + bi * lineH + 6 + bsh, W - 210, 26);
-            ctx.shadowBlur = 0;
-          }
-          ctx.globalAlpha = 1;
-        }
-        ctx.restore();
-
-        const progress = (si + t) / slides.length;
-        ctx.fillStyle = 'rgba(255,255,255,0.04)'; ctx.fillRect(0, H-5, W, 5);
+        // Progress
+        const progress = (si + t) / scenes.length;
+        ctx.fillStyle = 'rgba(255,255,255,0.03)'; ctx.fillRect(0, H-4, W, 4);
         const pg = ctx.createLinearGradient(0, 0, W, 0);
-        pg.addColorStop(0, c.p + '99'); pg.addColorStop(1, c.a + '66');
-        ctx.fillStyle = pg; ctx.fillRect(0, H-5, W * progress, 5);
+        pg.addColorStop(0, c.p + '88'); pg.addColorStop(1, c.a + '55');
+        ctx.fillStyle = pg; ctx.fillRect(0, H-4, W * progress, 4);
 
-        ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.font = '12px monospace'; ctx.textAlign = 'center';
-        ctx.fillText(`${si + 1} / ${slides.length}`, W/2, H-18);
-
-        ctx.fillStyle = c.p + '33'; ctx.font = '10px monospace'; ctx.textAlign = 'right';
-        ctx.fillText(slide.type.toUpperCase(), W - 30, 30);
+        ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.font = '11px monospace'; ctx.textAlign = 'center';
+        ctx.fillText(`${si + 1} / ${scenes.length}`, W/2, H-14);
+        ctx.fillStyle = c.p + '22'; ctx.font = '9px monospace'; ctx.textAlign = 'right';
+        ctx.fillText(scene.type.toUpperCase(), W - 25, 22);
 
         await new Promise(r => requestAnimationFrame(r));
       }
