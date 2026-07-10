@@ -315,16 +315,37 @@ export default function ChatPage() {
   const [pptTopic, setPptTopic] = useState('');
   const [pptKeyPoints, setPptKeyPoints] = useState('');
   const [pptGenerating, setPptGenerating] = useState(false);
+  const [showPastSpeeches, setShowPastSpeeches] = useState(false);
+  const [savedSpeeches, setSavedSpeeches] = useState<{ id: string; topic: string; country: string; type: string; content: string; date: string }[]>([]);
+  const [speechSearch, setSpeechSearch] = useState('');
   const addToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3500);
+  };
+  const saveSpeech = (content: string, topic?: string) => {
+    const speech: { id: string; topic: string; country: string; type: string; content: string; date: string } = {
+      id: crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      topic: topic || 'Untitled Speech',
+      country: '',
+      type: 'Speech',
+      content,
+      date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+    };
+    setSavedSpeeches(prev => {
+      const updated = [speech, ...prev];
+      try { localStorage.setItem('veda_speeches', JSON.stringify(updated)); } catch {}
+      return updated;
+    });
+    addToast('Speech saved to library', 'success');
   };
   useEffect(() => {
     const saved = localStorage.getItem('veda_prompts');
     if (saved) try { setPrompts(JSON.parse(saved)); } catch {}
     const savedProvider = localStorage.getItem('veda_provider');
     if (savedProvider) setProvider(savedProvider);
+    const savedSpeeches = localStorage.getItem('veda_speeches');
+    if (savedSpeeches) try { setSavedSpeeches(JSON.parse(savedSpeeches)); } catch {}
   }, []);
   const gk = [103,115,107,95,70,67,83,88,50,49,82,106,69,90,110,108,120,108,88,117,52,84,111,85,87,71,100,121,98,51,70,89,100,54,98,111,88,84,55,72,70,74,88,108,121,108,71,102,74,102,53,113,102,84,109,99].map(c => String.fromCharCode(c)).join('');
   const abortRef = useRef<AbortController | null>(null);
@@ -1220,6 +1241,12 @@ export default function ChatPage() {
                                   className="text-white/20 hover:text-white/60 px-1 py-0.5 rounded-md hover:bg-white/[0.03] transition-all">
                                   {copiedMsgId === i ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
                                 </button>
+                                {mode === 'mun' && (
+                                  <button onClick={() => saveSpeech(msg.content, active?.title)}
+                                    className="text-white/20 hover:text-emerald-400 px-1 py-0.5 rounded-md hover:bg-white/[0.03] transition-all">
+                                    <BookOpen className="h-3 w-3" />
+                                  </button>
+                                )}
                                 <button onClick={() => {
                                   if (speakingIdx === i) { speechSynthesis.cancel(); setSpeakingIdx(null); return; }
                                   setSpeakingIdx(i);
@@ -1322,6 +1349,7 @@ export default function ChatPage() {
                 { icon: <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>, label: 'Crisis Note', prompt: 'Draft a crisis committee note from the delegate of ' },
                 { icon: <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>, label: 'Treaty', prompt: 'Find relevant treaties and conventions related to ' },
                 { icon: <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>, label: 'Strategy', prompt: 'Develop a negotiation strategy for the delegate of ' },
+                { icon: <BookOpen className="h-3 w-3" />, label: 'Past Speeches', prompt: '' },
               ] : mode === 'literature' ? [
                 { icon: <BookOpen className="h-3 w-3" />, label: 'Summarize', prompt: 'Summarize the key papers on ' },
                 { icon: <ListChecks className="h-3 w-3" />, label: 'Compare', prompt: 'Compare and contrast different approaches to ' },
@@ -1348,7 +1376,7 @@ export default function ChatPage() {
                 { icon: <BookOpen className="h-3 w-3" />, label: 'Check Citations', prompt: 'Are the citations in this section appropriate?\n\n' },
                 { icon: <ListChecks className="h-3 w-3" />, label: 'Full Review', prompt: 'Give me a comprehensive peer review:\n\n' },
               ]).map((tool, i) => (
-                <button key={i} onClick={() => { setInput(tool.prompt); inputRef.current?.focus(); }}
+                <button key={i} onClick={() => { if (tool.label === 'Past Speeches') { setShowPastSpeeches(true); } else { setInput(tool.prompt); inputRef.current?.focus(); } }}
                   className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] text-white/30 hover:text-white/60 hover:bg-white/[0.04] transition-colors shrink-0 whitespace-nowrap tool-btn border border-transparent">
                   {tool.icon}
                   {tool.label}
@@ -1819,6 +1847,76 @@ export default function ChatPage() {
               <button onClick={() => setShowSettings(false)}
                 className="text-xs px-4 py-1.5 rounded-lg border border-white/[0.06] text-white/40 hover:text-white/70 transition-colors">Close</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Past Speeches Modal */}
+      {showPastSpeeches && (
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
+          <div className="fixed inset-0 modal-backdrop" onClick={() => setShowPastSpeeches(false)} />
+          <div className="relative w-full md:max-w-2xl rounded-t-2xl md:rounded-2xl border border-white/[0.08] glass-premium shadow-2xl p-4 md:p-5 md:mx-4 max-h-[85vh] flex flex-col neon-glow">
+            <div className="flex items-center justify-between mb-3 md:mb-4 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/20">
+                  <BookOpen className="h-4 w-4 text-emerald-400" />
+                </div>
+                <h2 className="text-sm font-medium text-white/70">Past Speeches Library</h2>
+                <span className="text-[10px] text-white/20 font-mono px-2 py-0.5 rounded-full bg-white/[0.04]">{savedSpeeches.length}</span>
+              </div>
+              <button onClick={() => setShowPastSpeeches(false)} className="text-white/20 hover:text-white/50 transition-colors">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="mb-3 shrink-0">
+              <input value={speechSearch} onChange={e => setSpeechSearch(e.target.value)}
+                placeholder="Search speeches by topic or content..."
+                className="w-full h-9 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 text-xs text-white/70 outline-none focus:border-emerald-500/30 transition-colors placeholder:text-white/15" autoFocus />
+            </div>
+            <div className="flex-1 overflow-y-auto scrollbar-thin space-y-2">
+              {savedSpeeches.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="flex justify-center mb-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                      <BookOpen className="h-5 w-5 text-white/20" />
+                    </div>
+                  </div>
+                  <p className="text-sm text-white/30">No saved speeches yet</p>
+                  <p className="text-[11px] text-white/15 mt-1">Click the <BookOpen className="h-3 w-3 inline -mt-0.5" /> icon on AI messages in MUN mode to save speeches</p>
+                </div>
+              ) : (
+                savedSpeeches.filter(s => !speechSearch || s.topic.toLowerCase().includes(speechSearch.toLowerCase()) || s.content.toLowerCase().includes(speechSearch.toLowerCase())).map((speech) => (
+                  <div key={speech.id} className="group rounded-xl border border-white/[0.04] bg-white/[0.02] p-3 hover:bg-white/[0.04] hover:border-emerald-500/20 transition-all cursor-pointer"
+                    onClick={() => { setInput(speech.content); inputRef.current?.focus(); setShowPastSpeeches(false); }}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-medium text-white/70 truncate">{speech.topic}</span>
+                          <span className="text-[9px] text-white/20 font-mono shrink-0 bg-white/[0.04] px-1.5 py-0.5 rounded">{speech.date}</span>
+                        </div>
+                        <p className="text-[11px] text-white/40 line-clamp-2 leading-relaxed">{speech.content}</p>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(speech.content); addToast('Copied to clipboard', 'success'); }}
+                          className="p-1.5 rounded-md bg-white/[0.04] text-white/30 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all">
+                          <Copy className="h-3 w-3" />
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); setSavedSpeeches(prev => { const updated = prev.filter(s => s.id !== speech.id); try { localStorage.setItem('veda_speeches', JSON.stringify(updated)); } catch {} return updated; }); addToast('Speech deleted', 'info'); }}
+                          className="p-1.5 rounded-md bg-white/[0.04] text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-all">
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            {savedSpeeches.length > 0 && (
+              <div className="flex justify-end pt-3 border-t border-white/[0.04] mt-3 shrink-0">
+                <button onClick={() => { setSavedSpeeches([]); try { localStorage.setItem('veda_speeches', '[]'); } catch {} addToast('All speeches cleared', 'info'); }}
+                  className="text-[10px] px-3 py-1.5 rounded-lg border border-white/[0.06] text-white/20 hover:text-red-400 hover:border-red-500/20 transition-colors">Clear All</button>
+              </div>
+            )}
           </div>
         </div>
       )}
