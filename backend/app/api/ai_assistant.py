@@ -206,7 +206,8 @@ async def export_docx(
     body: ChatRequest,
     current_user: User = Depends(get_current_user),
 ):
-    docx_bytes = build_docx(body.messages)
+    from app.services.docx_service import build_docx_from_chat
+    docx_bytes = build_docx_from_chat(body.messages)
     from fastapi.responses import Response
     return Response(
         content=docx_bytes,
@@ -257,6 +258,8 @@ async def humanize(body: HumanizeRequest, current_user: User = Depends(get_curre
 
 class GeneratePaperRequest(BaseModel):
     topic: str
+    author: str = "Author"
+    pages: int = 6
     api_key: Optional[str] = None
     provider: Optional[str] = None
 
@@ -267,40 +270,45 @@ async def generate_paper(body: GeneratePaperRequest, current_user: User = Depend
     if papers:
         refs = f"\n\nUse these real papers as references. Cite them in the text and include them in the reference list:\n{papers}"
 
+    sections_per_page = {"4": 4, "6": 6, "8": 8, "10": 10, "12": 12}
+    num_sections = sections_per_page.get(str(body.pages), 6)
+
     client = AIClient(api_key=body.api_key)
     prompt = f"""Write a complete academic research paper on the topic: "{body.topic}"
 
-Format the paper with these sections:
+The paper should be approximately {body.pages} pages in length with {num_sections} substantive sections.
+
+Format the paper with these exact sections:
+
 # Abstract
-(150-200 words summarizing the paper)
+(200-250 words summarizing the entire paper)
 
 # Introduction
-(Background, problem statement, research questions, paper structure)
+(Background, problem statement, research questions, and paper structure — 4-6 paragraphs)
 
-# Related Work
-(Discuss existing research and position this work)
+# Literature Review
+(Critical analysis of existing research, theoretical framework, identification of research gap — 4-6 paragraphs)
 
 # Methodology
-(Approach, methods, techniques used)
+(Research approach, data collection, analysis methods, ethical considerations — 4-6 paragraphs)
 
-# Results and Discussion
-(Key findings, analysis, implications)
+# Results
+(Key findings presented with clarity — 4-6 paragraphs)
+
+# Discussion
+(Interpretation of results, comparison with prior work, implications, limitations — 5-7 paragraphs)
 
 # Conclusion
-(Summary, contributions, limitations, future work)
+(Summary of contributions, practical implications, limitations, and future research directions — 3-5 paragraphs)
 
 # References
-(List all cited works with full details)
+(List all cited works with full bibliographic details in APA format — include the real arXiv papers provided below)
 
-Write in formal academic English. Each section should be substantial (3-8 paragraphs). Include specific details, arguments, and analysis. Use citations like [Author, Year] in the text.{refs}"""
+Write in formal academic English. Each section should be substantial with specific details, arguments, and analysis. Use proper in-text citations like (Author, Year). Include real-sounding data and statistical results where appropriate. The paper should read like a genuine peer-reviewed journal article.{refs}"""
 
-    result = await client.chat([{"role": "system", "content": "You are a PhD-level academic researcher writing a rigorous research paper. Write with authority, precision, and depth."}, {"role": "user", "content": prompt}])
+    result = await client.chat([{"role": "system", "content": "You are a PhD-level academic researcher writing a rigorous research paper for a top-tier journal. Write with authority, precision, depth, and the formal structure of a real published paper."}, {"role": "user", "content": prompt}])
 
-    messages = [
-        {"role": "user", "content": f"Write a research paper about: {body.topic}"},
-        {"role": "assistant", "content": result},
-    ]
-    docx_bytes = build_docx(messages)
+    docx_bytes = build_docx(body.topic, body.author, result)
     from fastapi.responses import Response
     safe = body.topic.replace(" ", "_")[:50]
     return Response(

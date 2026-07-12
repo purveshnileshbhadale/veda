@@ -273,6 +273,8 @@ export default function ChatPage() {
   const [humanizing, setHumanizing] = useState<number | null>(null);
   const [showGenerate, setShowGenerate] = useState(false);
   const [generateTopic, setGenerateTopic] = useState('');
+  const [generateAuthor, setGenerateAuthor] = useState('');
+  const [generatePages, setGeneratePages] = useState(6);
   const [generating, setGenerating] = useState(false);
   const [temperature, setTemperature] = useState(0.7);
   const [mode, setMode] = useState('research');
@@ -698,20 +700,22 @@ export default function ChatPage() {
     try {
       const r = await fetch(`${API}/ai/generate-paper`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` },
-        body: JSON.stringify({ topic, api_key: gk }),
+        body: JSON.stringify({ topic, author: generateAuthor.trim() || 'Author', pages: generatePages, api_key: gk }),
       });
       if (!r.ok) { setGenerating(false); return; }
       const blob = await r.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${topic.slice(0, 40).replace(/[^a-zA-Z0-9]/g, '_')}.docx`;
+      a.download = `${topic.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '_')}.docx`;
       a.click();
       URL.revokeObjectURL(url);
     } catch {}
     setGenerating(false);
     setShowGenerate(false);
     setGenerateTopic('');
+    setGenerateAuthor('');
+    setGeneratePages(6);
   };
 
   const generateVideoScript = async () => {
@@ -1831,27 +1835,50 @@ export default function ChatPage() {
       {/* Generate Paper Modal */}
       {showGenerate && (
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
-          <div className="fixed inset-0 modal-backdrop" onClick={() => { if (!generating) { setShowGenerate(false); setGenerateTopic(''); } }} />
+          <div className="fixed inset-0 modal-backdrop" onClick={() => { if (!generating) { setShowGenerate(false); setGenerateTopic(''); setGenerateAuthor(''); setGeneratePages(6); } }} />
           <div className="relative w-full md:max-w-md rounded-t-2xl md:rounded-2xl border border-white/[0.08] glass-premium shadow-2xl p-4 md:p-5 md:mx-4 neon-glow animate-springIn">
             <div className="flex items-center justify-between mb-3 md:mb-4">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/20">
                   <FileDown className="h-4 w-4 text-emerald-400" />
                 </div>
-                <h2 className="text-sm font-medium text-white/70">Generate Paper</h2>
+                <h2 className="text-sm font-medium text-white/70">Generate Research Paper</h2>
               </div>
-              <button onClick={() => { if (!generating) { setShowGenerate(false); setGenerateTopic(''); } }} className="text-white/20 hover:text-white/50 transition-colors">
+              <button onClick={() => { if (!generating) { setShowGenerate(false); setGenerateTopic(''); setGenerateAuthor(''); setGeneratePages(6); } }} className="text-white/20 hover:text-white/50 transition-colors">
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <p className="text-xs text-white/30 mb-3">Enter a topic to generate a complete research paper with real arXiv references as DOCX.</p>
-            <input value={generateTopic} onChange={(e) => setGenerateTopic(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') generatePaper(); }}
-              placeholder="e.g. Quantum machine learning for drug discovery"
-              className="w-full h-10 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 text-sm text-white/70 outline-none focus:border-emerald-500/30 transition-colors placeholder:text-white/15 mb-3"
-              disabled={generating} autoFocus />
-            <div className="flex gap-2 justify-end">
-              <button onClick={() => { setShowGenerate(false); setGenerateTopic(''); }}
+            <p className="text-xs text-white/30 mb-3">Enter details to generate a complete, properly formatted research paper as DOCX.</p>
+            <div className="space-y-3">
+              <div>
+                <label className="text-[10px] text-white/30 font-mono mb-1 block">Research Topic *</label>
+                <input value={generateTopic} onChange={(e) => setGenerateTopic(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') generatePaper(); }}
+                  placeholder="e.g. Quantum machine learning for drug discovery"
+                  className="w-full h-10 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 text-sm text-white/70 outline-none focus:border-emerald-500/30 transition-colors placeholder:text-white/15"
+                  disabled={generating} autoFocus />
+              </div>
+              <div>
+                <label className="text-[10px] text-white/30 font-mono mb-1 block">Author Name</label>
+                <input value={generateAuthor} onChange={(e) => setGenerateAuthor(e.target.value)}
+                  placeholder="e.g. Dr. Jane Smith"
+                  className="w-full h-10 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 text-sm text-white/70 outline-none focus:border-emerald-500/30 transition-colors placeholder:text-white/15"
+                  disabled={generating} />
+              </div>
+              <div>
+                <label className="text-[10px] text-white/30 font-mono mb-1 block">Number of Pages</label>
+                <div className="flex gap-2">
+                  {[4, 6, 8, 10, 12].map(n => (
+                    <button key={n} onClick={() => setGeneratePages(n)}
+                      className={`flex-1 h-9 rounded-lg text-xs font-medium transition-all ${generatePages === n ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'border border-white/[0.06] text-white/30 hover:text-white/50 hover:bg-white/[0.03]'}`}>
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end mt-4">
+              <button onClick={() => { setShowGenerate(false); setGenerateTopic(''); setGenerateAuthor(''); setGeneratePages(6); }}
                 className="text-xs px-4 py-2 rounded-lg border border-white/[0.06] text-white/40 hover:text-white/70 transition-colors">Cancel</button>
               <button onClick={generatePaper} disabled={!generateTopic.trim() || generating}
                 className="flex items-center gap-2 text-xs px-4 py-2 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
