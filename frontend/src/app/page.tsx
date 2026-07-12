@@ -1867,14 +1867,9 @@ export default function ChatPage() {
               </div>
               <div>
                 <label className="text-[10px] text-white/30 font-mono mb-1 block">Number of Pages</label>
-                <div className="flex gap-2">
-                  {[4, 6, 8, 10, 12].map(n => (
-                    <button key={n} onClick={() => setGeneratePages(n)}
-                      className={`flex-1 h-9 rounded-lg text-xs font-medium transition-all ${generatePages === n ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'border border-white/[0.06] text-white/30 hover:text-white/50 hover:bg-white/[0.03]'}`}>
-                      {n}
-                    </button>
-                  ))}
-                </div>
+                <input type="number" min={2} max={30} value={generatePages} onChange={e => setGeneratePages(Math.max(2, Math.min(30, parseInt(e.target.value) || 2)))}
+                  className="w-full h-10 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 text-sm text-white/70 outline-none focus:border-emerald-500/30 transition-colors"
+                  disabled={generating} />
               </div>
             </div>
             <div className="flex gap-2 justify-end mt-4">
